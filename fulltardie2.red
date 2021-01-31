@@ -1,34 +1,9 @@
 Red [needs: 'view]
 
 ;; work-in-progress
+;; most of this will get hosed soon, new data structure incoming.
 
-;; ! = doing it. 
-;; - = plan to do it next
-;; ? = having problems, requested support.
-
-;; TODO: [X] make save data orgmode-compatible instead of csv (for now)
-;; TODO: [-] fix off-by one for entries starting on the 1st when today is the 2nd
-;; TODO: [!] fix rounding on balance display in forcast
-;; TODO: [!] investigate memory issues and random crashing
-;; TODO: [ ] rename offset to period ? its not very clear what it does.
-;; TODO: [-] replace headers with sort-buttons
-;; TODO: [!] restore UI from FT1 & adapt to new data
-;; TODO: [?] interactive graph: pan, zoom & fit
-;; TODO: [?] nicer graph: color coding, stack overlapping, optional tooltip info
-;; TODO: [ ] new params for forecast: start/end, filters, grouping, export
-;; TODO: [ ] new params for graph: start/end, filters, color-coding.
-;; TODO: [ ] csv export of rules
-;; TODO: [ ] option to show next date in rule table
-;; TODO: [ ] portable executable test - Linux
-;; TODO: [ ] option to hold a forecasted transaction in a watch list (serves as a reminder/warning for overdue).
-;; TODO: [ ] option to always hold transactions from setup (serves a reminder for non-automatic transactions).
-;; TODO: [?] calendar tab
-;; TODO: [ ] optimize
-;; TODO: [ ] redify
-;; TODO: [ ] audit
-
-;; grab work-in-progress red from here : http://static.red-lang.org/dl/branch/GTK/linux/red-latest
-;; Red-gtk is still all-kinds of busted as of writing, plus there's no sign of x64 Red... so this project is ultra low-priority.
+;; crawling back to Red after a truly awful experience swift...
 
 
 lymd: function [cy] [
