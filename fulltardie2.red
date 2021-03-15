@@ -226,6 +226,7 @@ getforecast: function [ d tabi tabf ] [
 		append f nd
 	]
 	sort/compare f func [a b] [
+;; the GTK text list reverses its data, so the sort is reversed to compensate!
 		case [
 			a/1 > b/1 [-1] 
 			a/1 < b/1 [1]
