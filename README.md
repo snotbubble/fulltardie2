@@ -12,6 +12,7 @@
 - [ ] assign views to panes, allowing for duplication, eg: two graphs.
 - [ ] view panes to have in-situ settings bar
 - [ ] update i/o
+- [ ] scenario switcher
 
 these will expand to cover specific per-view features:
 - [ ] rule list view
