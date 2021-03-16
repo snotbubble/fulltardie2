@@ -14,19 +14,23 @@
 - [ ] update i/o
 - [ ] scenario switcher
 
-these will expand to cover specific per-view features:
 rule list view
 - [ ] rule list header
 - [ ] rule list lower space (last-entry fights with the horizontal scrollabr)
+
 selected-rule parameters view
 - [ ] auto re-arrange wigets to fit panel
 - [ ] fix any off-by-one errors
 - [ ] clarify display of :each nth weekday
+
 forecast list view
 - [ ] test existing
+
 graph view
 - [ ] re-write it
+
 calendar view (maybe)
 - [ ] study existing techniques
+
 raw data view
 - [ ] test existing
