@@ -123,7 +123,7 @@ repeat s (length? sd) [
 
 findnextdate: function [ dt tabi tabf ] [
 	print [ tabi "findnextdate function triggered by " tabf "..." ]
-    print [ tabi "findnexdate source data: " dt ]
+    ;print [ tabi "findnexdate source data: " dt ]
 	allgood: true
 
 	n: now/date
@@ -157,10 +157,10 @@ findnextdate: function [ dt tabi tabf ] [
 	a: make date! [fye fmo fdy]
 	j: make date! [fye fmo fdy]
 	
-	print [ tabi "^-findnextdate search-start-date is: " a ]
+	;print [ tabi "^-findnextdate search-start-date is: " a ]
 
 	dif: ( to-integer ((((now/date - a) / 7.0) / 52.0) * 12.0) ) + 13
-	print [ tabi "^-findnextdate differnce in months between now and search-start-date is : " dif ]
+	;print [ tabi "^-findnextdate differnce in months between now and search-start-date is : " dif ]
 	if allgood [
 		loop dif [
 			dmo: (a/month = fmo)
@@ -176,9 +176,9 @@ findnextdate: function [ dt tabi tabf ] [
 				if (wkd = 0) or (wkd > 7) [ 
 					mth: max (min nth md) ffd	
 					if mth = 0 [ 
-						print[ tabi "^-findnextdate found zero nth in " dt ]
+						;print[ tabi "^-findnextdate found zero nth in " dt ]
 						mth: now/day 
-						print[ tabi "^-findnextdate setting mth to " mth ]
+						;print[ tabi "^-findnextdate setting mth to " mth ]
 					]
 				]
 
@@ -216,7 +216,7 @@ findnextdate: function [ dt tabi tabf ] [
 						]
 						a/day: avd
 						if a >= n [ 
-							print[ tabi "^-found next date " a ]
+							;print[ tabi "^-found next date " a ]
 							append/only o reduce [a (round/to (to-float dt/8) 0.01) dt/9 dt/11]
 						]
 						if ofs = 0 [ break ]
@@ -237,7 +237,7 @@ getforecast: function [ d tabi tabf ] [
 	print[ tabi "getforecast triggered by " tabf "..." ]
 	f: copy []
 	foreach t d [
-		print[ tabi "^-getforecast is checking row of data: " t ]
+		;print[ tabi "^-getforecast is checking row of data: " t ]
 		nd: findnextdate t rejoin [ tabi "^-^-"] "getforecast"
 		append f nd
 	]
@@ -267,7 +267,7 @@ renderforecast: function [ f tabi tabf ] [
 	pads: copy/deep [ 0 0 0 0 0 ]
 	rc: 1
 	foreach r f [
-		print[ tabi "^-checking row : " r ]
+		;print[ tabi "^-checking row : " r ]
 		r/1: (to-string r/1)
 		r/2: (to-string r/2)
 		r/5: (to-string r/5)
@@ -327,7 +327,7 @@ rendersrc: function [d tabi tabf ] [
 	insert/only d hh
 	pads: copy/deep [ 0 0 0 0 0 0 0 0 0 0 0 ]
 	foreach r d [
-		;print[ "		checking row : " r ]
+		;print[ tabi "^-checking row : " r ]
 		p: 1
 		foreach c r [
 			ml: (length? c) + 3
@@ -467,7 +467,7 @@ changeparam: func [ i s ] [
 	rlist/data: rendrules/1
 	rlist/selected: rsidx
 	nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
-	tqq/text: mold nxt/1
+	tqq/text: to-string nxt/1/1
 ]
 
 
@@ -477,18 +477,19 @@ pparm: compose/deep [
 	ppane: panel loose with [ offset 0x0 ] [
 		across
 		text 140x30 "Transaction Rule"
-		fname: field 300x30 [ unless noupdate [ changeparam 11 face/text ] ]
-		text 80x30 "Amount"
-		famt: field 100x30 [ unless noupdate [ changeparam 8 face/text ] ]
+		fname: field 520x30 [ unless noupdate [ changeparam 11 face/text ] ]
 		return
 		text 140x30 "Group"
-		lgrp: drop-down 200x30 data groupdata [ unless noupdate [ changeparam 10 (quote face/data/(face/selected)) ]]
-		text 80x30 "Category"
-		lcat: drop-down 200x30 data catdata [ unless noupdate [ changeparam 9 (quote face/data/(face/selected)) ]]
+		lgrp: drop-down 100x30 data groupdata [ unless noupdate [ changeparam 10 (quote face/data/(face/selected)) ]]
+		pad 10x0 text 80x30 "Category"
+		lcat: drop-down 100x30 data catdata [ unless noupdate [ changeparam 9 (quote face/data/(face/selected)) ]]
+		pad 10x0 text 80x30 "Amount"
+		famt: field 100x30 [ unless noupdate [ changeparam 8 face/text ] ]
 		return
 		pad 0x10 text 140x30 "Recurrance"
+		button "test layout" [ layoutparams ppane/size/x 10 10 ]
 		return
-		panel black [
+		squishme: panel [
 		    leach: drop-list data [ "the" "every" "every 2" "every 3" "every 4" "every 5" "every 6" "every 7" "every 8" "every 9" "every 10" "every 11" "every 12" "every 13" "every 14" "every 15" "every 16" "every 17" "every 18" "every 19" "every 20" "every 21" "every 22" "every 23" "every 24" "every 25" "every 26" "every 27" "every 28" "every 29" "every 30" "every 31" ] select 1	[ 
 			    unless noupdate [ changeparam 1 (quote (to-string (face/selected - 1))) ]
 			]
@@ -517,7 +518,6 @@ pparm: compose/deep [
 			lfromday: drop-list data [ "" "from the 1st" "from the 2nd" "from the 3rd" "from the 4th" "from the 5th" "from the 6th" "from the 7th" "from the 8th" "from the 9th" "from the 10th" "from the 11th" "from the 12th" "from the 13th" "from the 14th" "from the 15th" "from the 16th" "from the 17th" "from the 18th" "from the 19th" "from the 20th" "from the 21st" "from the 22nd" "from the 23rd" "from the 24th" "from the 25th" "from the 26th" "from the 27th" "from the 28th" "from the 29th" "from the 30th" "from the 31st" ] [
 				unless noupdate [ changeparam 4 (quote (to-string face/selected)) ]
 			]
-			return
 		    lnthmonth: drop-list data [ "of" "of every month from" "of every 2nd month from" "of every 3rd month from" "of every 4th month from" "of every 5th month from" "of every 6th month from" "of every 7th month from" "of every 8th month from" "of every 9th month from" "of every 10th month from" "of every 11th month from" "of" "of"] [
 				unless noupdate [ changeparam 5 (quote (to-string (face/selected - 1))) ]
 			]
@@ -529,7 +529,7 @@ pparm: compose/deep [
 			]
 		]
 		return
-		text 140x30 "next transaction is:"
+		tql: text 140x30 "next transaction is:"
 		tqq: text 700x30
 	] react [ 
 		(to-set-path [face offset x ]) 0
@@ -543,6 +543,9 @@ prule: compose/deep [
 	below
    	rlist: text-list 760x310 data rendrules/1 select 1 font-name "consolas" font-size 8 font-color 80.180.255 with [ offset: 0x0 ] [
 		noupdate: true
+		squish: false
+		attempt [ none? ppane squish: true ]
+		if squish [ layoutparams ppane/size/x 10 10 ]
 		rsidx: face/selected
 		probe rsidx
 		probe td/:rsidx/1
@@ -573,9 +576,70 @@ prule: compose/deep [
 		probe td/:rsidx
 		nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
 		probe nxt/1
-		tqq/text: mold nxt/1
+		tqq/text: to-string nxt/1/1
 		noupdate: false
 	]
+]
+
+squishparms: func [ sx ] [
+	currentsx: squishme/size/x
+	blockn: [ lfromyear lfrommonth lnthmonth lfromday lweekday lday leach ]
+    n: 1
+	while [currentsx > sx] [
+		if n > 7 [ break ]
+		p: reduce blockn/:n
+		if p/offset/x > 0 [
+			;print [ "moving parameter widget (" n "): " blockn/:n ]
+			currentsx: p/offset/x
+			squishme/size/x: currentsx + 10
+	    	p/offset/x: 0
+			p/offset/y: p/offset/y + 30
+		]
+		n: n + 1
+	]
+]
+
+layoutparams: function [cx ox oy] [
+	m: to-integer (cx / 300.0)
+	blockn: [ leach lday lweekday lfromday lnthmonth lfrommonth lfromyear ]
+	blockw: [ leach/size/x lday/size/x lweekday/size/x lfromday/size/x lnthmonth/size/x lfrommonth/size/x lfromyear/size/x ]
+	;blockm: copy []
+	su: 0
+	n: 1
+    row: copy []
+	rows: copy/deep reduce [ row row row row row row row ]
+	r: 1
+	foreach s blockw [
+		p: reduce blockn/:n
+		su: su + reduce s
+		either su >= (cx - 30) [ 
+		    r: r + 1 append rows/:r reduce p su: reduce s
+		] [
+			append rows/:r reduce p
+		]
+		n: n + 1
+	]
+
+	rk: 0
+	foreach rw rows [
+		if (length? rw) > 0 [
+			mk: 0
+			foreach co rw [
+				p: reduce co
+				p/offset/x: mk
+				mk: mk + p/size/x
+				p/offset/y: rk
+			]
+			rk: rk + 35
+		]
+	]
+	;clear rows
+	;clear blockn
+	;clear blockw
+	squishme/size/y: rk
+	tql/offset/y: squishme/offset/y + squishme/size/y + 20
+	tqq/offset/y: tql/offset/y
+	ppane/size/y: tqq/offset/y + 40
 ]
 
 view [
@@ -583,10 +647,10 @@ view [
 	below
 	aa: panel 800x380 [
 		below
-		aah: panel 50.50.50 790x55 [
+		aah: panel 50.50.50 790x55 with [ offset: 0x0 ] [
 			aaddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
 				switch face/selected [
-					1 [ noupdate: true aap/pane: layout/only prule rlist/size/x: aa/size/x - 30 rlist/size/y: aa/size/y - 90]
+					1 [ noupdate: true aap/pane: layout/only prule rlist/offset: 0x0 rlist/size/x: aa/size/x rlist/size/y: aa/size/y - 55]
 					2 [ noupdate: true aap/pane: layout/only pparm ]
 				]
 			]
@@ -594,15 +658,25 @@ view [
 		aap: panel 790x500 [ ]
 	]
 	hh: panel 800x10 40.40.40 loose draw [ ] react [
-		face/offset/x: 10
+		face/offset/x: 0
 		face/offset/y: min (max 200 face/offset/y) 600
-		bb/offset/y: face/offset/y + 10 
-		bb/size/y: 810 - bb/offset/y
-		aa/size/y: face/offset/y - 10
-		attempt [ aah/size/x: face/size/x - 20 ]
-		attempt [ aap/size/x: face/size/x - 20 ]
-		attempt [ rlist/size/x: face/size/x - 20 ]
-	    face/draw: compose/deep [
+		aa/offset/y: 0
+		bb/offset/y: face/offset/y + 10
+		cc/offset/y: 0
+		aa/size/y: face/offset/y
+		bb/size/y: vv/size/y - face/offset/y - 10
+		cc/size/y: vv/size/y
+		aah/offset/y: 0
+		bbh/offset/y: 0
+		cch/offset/y: 0
+		aap/offset/y: 55
+		bbp/offset/y: 55
+		ccp/offset/y: 55
+		aap/size/y: aa/size/y - 55
+		bbp/size/y: bb/size/y - 55 - 10
+		ccp/size/y: cc/size/y - 55
+		attempt [ rlist/size/y: rlist/parent/size/y ]
+		face/draw: compose/deep [
 			pen off
 		   	fill-pen 100.100.100
 			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) - 10) 5]) 3 3 
@@ -610,39 +684,66 @@ view [
 			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) + 10) 5]) 3 3 
 		] 
 	]
-	bb: panel 800x380 [
+	bb: panel green 800x380 [
 		below
-		bbh: panel 50.50.50 790x55 [
+		bbh: panel 50.50.50 790x55 with [ offset: 0x0 ] [
 			bbddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
 				switch face/selected [
-					1 [ noupdate: true bbp/pane: layout/only prule rlist/size/x: bb/size/x - 30 rlist/size/y: bb/size/y - 90]
+					1 [ noupdate: true bbp/pane: layout/only prule rlist/offset: 0x0 rlist/size/x: bb/size/x rlist/size/y: bb/size/y - 55]
 					2 [ noupdate: true bbp/pane: layout/only pparm ]
 				]
 			]
 		]
-		bbp: panel 790x500 [ ]
+		bbp: panel red 790x500 [ ]
 	]
 	return
 	vv: panel 10x800 40.40.40 loose draw [ ] react [ 
-		face/offset/y: 10 
-		face/offset/x: min (max 500 face/offset/x) 900 
-		aa/size/x: face/offset/x - 10 
-		bb/size/x: face/offset/x - 10 
+		face/offset/y: 0
+		face/offset/x: min (max 500 face/offset/x) 900
+		aa/offset/x: 0
+		bb/offset/x: 0
 		cc/offset/x: face/offset/x + 10 
-		cc/size/x: 1120 - cc/offset/x 
-		hh/size/x: face/offset/x - 10
-		attempt [ aap/size/x: face/offset/x - 20 ]
-		attempt [ aah/size/x: face/offset/x - 20 ]
-		attempt [ rlist/size/x: face/offset/x - 40 ]
-		attempt [ rlist/size/y: aa/size/y - 90 ]
-	    face/draw: compose/deep [ 
+		aa/size/x: face/offset/x
+		bb/size/x: face/offset/x
+		cc/size/x: cc/parent/size/x - cc/offset/x 
+		hh/size/x: face/offset/x
+		aah/offset/x: 0
+		bbh/offset/x: 0
+		cch/offset/x: 0
+		aah/size/x: aa/size/x
+		bbh/size/x: bb/size/x
+		cch/size/x: cc/size/x
+		aap/offset/x: 0
+		bbp/offset/x: 0
+		ccp/offset/x: 0
+		aap/size/x: aa/size/x
+		bbp/size/x: bb/size/x
+		ccp/size/x: cc/size/x
+		attempt [ rlist/size/x: rlist/parent/size/x ]
+		attempt [ ppane/size/x: ppane/parent/size/x - 10 ]
+		face/draw: compose/deep [ 
 			pen off 
 		   	fill-pen 100.100.100
 			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) - 10)]) 3 3 
 			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5))]) 3 3
 			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) + 10)]) 3 3 
-		] 
+		]
+		squish: false
+		attempt [ none? ppane squish: true ]
+		if squish [ layoutparams ppane/size/x 10 10 ]
+		
 	]
 	return
-	cc: panel 280x800 []
+	cc: panel 280x800 [
+		below
+		cch: panel 50.50.50 790x55 with [ offset: 0x0 ] [
+			ccddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+				switch face/selected [
+					1 [ noupdate: true ccp/pane: layout/only prule rlist/offset: 0x0 rlist/size/x: cc/size/x rlist/size/y: cc/size/y - 55]
+					2 [ noupdate: true ccp/pane: layout/only pparm ]
+				]
+			]
+		]
+		ccp: panel blue 790x500 [ ]
+	]
 ]
