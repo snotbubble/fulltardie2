@@ -3,11 +3,11 @@
 - uses complex recurrence rules that should cover most cycles
 
 # todo
-- [ ] brain-surgery: swap out the data structure
+- [X] brain-surgery: swap out the data structure
 - [ ] automatic plain-English translation of the recurrence rules
-- [ ] set rule elements by clicking on parts of the English translation
-- [ ] 3-pane ui
-- [ ] resize panes with dividers
+- [X] set rule elements by clicking on parts of the English translation
+- [X] 3-pane ui
+- [X] resize panes with dividers
 - [ ] view/face params react to data (currently they are the data)
 - [ ] assign views to panes, allowing for duplication, eg: two graphs.
 - [ ] view panes to have in-situ settings bar
@@ -15,7 +15,9 @@
 - [ ] scenario switcher
 
 these will expand to cover specific per-view features:
-- [ ] rule list view
+- rule list view
+- [ ] rule list header
+- [ ] rule list lower space (last-entry fights with the horizontal scrollabr)
 - [ ] selected-rule parameters view
 - [ ] forecast list view
 - [ ] graph view
