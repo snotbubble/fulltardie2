@@ -4,22 +4,29 @@ Red [needs: 'view]
 ;; unless there's a compiled binary, assume this is all kinds of broken
 ;;
 ;; 32-bit only! don't use if polluting your system with 32-bit libraries isn't an option.
-;; I'm investigating other languages for 64-bit. R3 is promising, but the UI looks like ass and Draw isn't suitable for UI widgets... not without adding a massive amount of complexity in any case.
-;;
-;; there's a good chance I'll abandon this if the IOS version is relatively painless to use... ui vs screen-space is the only hurdle atm.
-
 
 
 ;; ! : doing it
 ;; ? : having problems with it
 ;; - : dropped it
 ;;
-;; TODO: [!] fix issues cause by the new data structure
 ;; TODO: [!] handle simple day-counting in findnextdate
-;; TODO: [ ] start plain-english translator
+;; TODO: [!] start plain-english translator
+;; TODO: [!] panel switchers
+;; TODO: [ ] fix every-nth every-day logic
+;; TODO: [ ] fix from-day
+;; TODO: [ ] re-arrange params to fit panel
+;; TODO: [ ] rule list header ui
+;; TODO: [ ] add blank line to bottom of rule list & hadle it
+;; TODO: [ ] test forecast ui
+;; TODO: [ ] rewrite graph ui
 
 
+;; rule selection index, used everywhere:
+rsidx: 1
 
+;; stop ui events from looping
+noupdate: true
 
 lymd: function [ cy tabi tabf ] [
 ;; this gets pounded by the forecast, disabled print until its optimized
@@ -83,15 +90,15 @@ renderraw: function  [d tabi tabf ] [
 ;; = every 14th, 14th weekday or next after, of every month, starting from this month, starting from this year 
 ;; = the weekday on or after the 14th and 28th of every month from now.
 
-sampledata: {|eac|ntd|wkd|ntm|mth|yea|amt|cat|grp|description|
-|1|1|7|1|7|0|-5.00|cat1|grp1|every sunday of every month starting from this september|
-|2|2|1|1|0|0|-10.0|cat2|grp1|every 2nd and 4th monday of every month starting this month|
-|1|6|4|3|2|0|-150.0|cat3|grp1|every last thursday of every 3rd month starting february|
-|1|26|8|1|0|0|50.0|cat4|grp2|every weekday closest to the 26th of the month starting this month|
-|1|33|0|12|2|0|-60.0|cat1|grp2|every last day of february|
-|0|8|0|0|8|0|-300.0|cat2|grp3|next august 8th|
-|0|9|9|1|11|0|15.0|cat3|grp3|every weekday before the 9th of every month starting november|
-|14|14|10|1|0|0|45.0|cat4|grp3|every 14th and 28th day of every month or the following weekday if on a weekend|}
+sampledata: {|eac|ntd|wkd|fdy|ntm|mth|yea|amt|cat|grp|description|
+|1|1|7|0|1|7|0|-5.00|cat1|grp1|every sunday of every month starting from this september|
+|2|2|1|0|1|0|0|-10.0|cat2|grp1|every 2nd and 4th monday of every month starting this month|
+|1|6|4|0|3|2|0|-150.0|cat3|grp1|every last thursday of every 3rd month starting february|
+|1|26|8|0|1|0|0|50.0|cat4|grp2|every weekday closest to the 26th of the month starting this month|
+|1|32|0|0|12|2|0|-60.0|cat1|grp2|every last day of february|
+|0|8|0|0|0|8|0|-300.0|cat2|grp3|next august 8th|
+|0|9|9|0|1|11|0|15.0|cat3|grp3|every weekday before the 9th of every month starting november|
+|14|14|10|0|1|0|0|45.0|cat4|grp3|every 14th and 28th day of every month or the following weekday if on a weekend|}
 
 sd: split sampledata "^/"
 
@@ -115,8 +122,8 @@ repeat s (length? sd) [
 ]
 
 findnextdate: function [ dt tabi tabf ] [
-	print[ tabi "findnextdate function triggered by " tabf "..." ]
-	;probe dt
+	print [ tabi "findnextdate function triggered by " tabf "..." ]
+    print [ tabi "findnexdate source data: " dt ]
 	allgood: true
 
 	n: now/date
@@ -124,18 +131,23 @@ findnextdate: function [ dt tabi tabf ] [
 
 	ofs: (to-integer dt/1)
 	nth: (to-integer dt/2)
-	ofm: (to-integer dt/4)
-	fmo: (to-integer dt/5)
-	fye: (to-integer dt/6)
-
+	ofm: (to-integer dt/5)
+	fmo: (to-integer dt/6)
+	fye: (to-integer dt/7)
 	wkd: (to-integer dt/3)
+	ffd: (to-integer dt/4)
 
 	if fmo = 0 [fmo: n/month]
 	if fye = 0 [fye: n/year]
 	fdy: now/day
 
-	t: lymd fye rejoin [ tabi "^-" ] "findnextdate"
+;; get last day of the month
+
+	t: lymd fye rejoin [ tabi "^-^-" ] "findnextdate"
 	md: pick t fmo
+
+;; clamp search-start-day to last day of the month if greater
+
 	if md < fdy [ fdy: md ]
 	
 	;probe fye
@@ -144,25 +156,29 @@ findnextdate: function [ dt tabi tabf ] [
 	
 	a: make date! [fye fmo fdy]
 	j: make date! [fye fmo fdy]
-	dif: ( to-integer ((((now/date - a) / 7.0) / 52.0) * 12.0) ) + 12
-	;;print [ tabi "^-dif = " dif ]
+	
+	print [ tabi "^-findnextdate search-start-date is: " a ]
+
+	dif: ( to-integer ((((now/date - a) / 7.0) / 52.0) * 12.0) ) + 13
+	print [ tabi "^-findnextdate differnce in months between now and search-start-date is : " dif ]
 	if allgood [
 		loop dif [
 			dmo: (a/month = fmo)
+			;print [ tabi "^-findnextdate checking if its reached the last month: " a/month "-" fmo "%" ofm "=" (a/month - fmo) % ofm ]
 			if ofm > 0 [ dmo: ((a/month - fmo) % ofm = 0) ]
 			if dmo [
 				c: 0
-				t: lymd a/year rejoin [ tabi "^-" ] "findnextdate"
+				t: lymd a/year rejoin [ tabi "^-^-" ] "findnextdate"
 				wdc: 0
 				cdc: 0
 				md: pick t a/month
 
 				if (wkd = 0) or (wkd > 7) [ 
-					mth: min nth md	
+					mth: max (min nth md) ffd	
 					if mth = 0 [ 
-						;print[ tabi "found zero nth in " dt ]
+						print[ tabi "^-findnextdate found zero nth in " dt ]
 						mth: now/day 
-						;print[ tabi "setting mth to " mth ]
+						print[ tabi "^-findnextdate setting mth to " mth ]
 					]
 				]
 
@@ -200,8 +216,8 @@ findnextdate: function [ dt tabi tabf ] [
 						]
 						a/day: avd
 						if a >= n [ 
-							;print[ tabi "^-found next date " a ]
-							append/only o reduce [a (to-float dt/7) dt/9 dt/8]
+							print[ tabi "^-found next date " a ]
+							append/only o reduce [a (round/to (to-float dt/8) 0.01) dt/9 dt/11]
 						]
 						if ofs = 0 [ break ]
 					]
@@ -221,12 +237,11 @@ getforecast: function [ d tabi tabf ] [
 	print[ tabi "getforecast triggered by " tabf "..." ]
 	f: copy []
 	foreach t d [
-		;print[ tabi "^-checking row of data: " t ]
-		nd: findnextdate t rejoin [ tabi "^-"] "getforecast"
+		print[ tabi "^-getforecast is checking row of data: " t ]
+		nd: findnextdate t rejoin [ tabi "^-^-"] "getforecast"
 		append f nd
 	]
 	sort/compare f func [a b] [
-;; the GTK text list reverses its data, so the sort is reversed to compensate!
 		case [
 			a/1 > b/1 [-1] 
 			a/1 < b/1 [1]
@@ -235,9 +250,9 @@ getforecast: function [ d tabi tabf ] [
 	]
 	rb: 0.0
 	foreach r f [
-		af: (to-float r/2)
+		af: round/to (to-float r/2) 0.01
 		rb: rb + af
-		append r rb
+		append r round/to rb 0.01
 	]
 	print[ tabi "getforecast function is done. " ]
 	f
@@ -252,7 +267,7 @@ renderforecast: function [ f tabi tabf ] [
 	pads: copy/deep [ 0 0 0 0 0 ]
 	rc: 1
 	foreach r f [
-		;print[ tabi "^-checking row : " r ]
+		print[ tabi "^-checking row : " r ]
 		r/1: (to-string r/1)
 		r/2: (to-string r/2)
 		r/5: (to-string r/5)
@@ -288,19 +303,29 @@ getcats: function [ d tabi tabf ] [
 	print [ tabi "getcats function triggered by " tabf "..." ]
 	c: copy []
 	foreach r d [
-		tr: trim/head (trim/tail r/8)
+		tr: trim/head (trim/tail r/9)
 		if (find c tr) = none [ append c tr ]
 	]
 	print [ tabi "getcats function is done." ] 
+	c
+]
+getgroups: function [ d tabi tabf ] [
+	print [ tabi "getgroups function triggered by " tabf "..." ]
+	c: copy []
+	foreach r d [
+		tr: trim/head (trim/tail r/10)
+		if (find c tr) = none [ append c tr ]
+	]
+	print [ tabi "getgroups function is done." ] 
 	c
 ]
 
 rendersrc: function [d tabi tabf ] [
 	print[ tabi "rendersrc triggered by " tabf "..." ]
 	o: copy []
-	hh: copy/deep ["offset" "nth day" "weekday" "nth month" "from month" "from year" "amount" "description" "category"]
+	hh: copy/deep ["eah" "ntd" "wkd" "fdy" "ntm" "mth" "yea" "amount" "cat" "grp" "description"]
 	insert/only d hh
-	pads: copy/deep [ 0 0 0 0 0 0 0 0 0 0 ]
+	pads: copy/deep [ 0 0 0 0 0 0 0 0 0 0 0 ]
 	foreach r d [
 		;print[ "		checking row : " r ]
 		p: 1
@@ -330,34 +355,33 @@ rendersrc: function [d tabi tabf ] [
 	out
 ]
 
-updateui: function [ x tabi tabf ] [
-	print [ tabi "updateui function triggered by " tabf "..." ]
-	rs: rendersrc copy/deep td
-	srclist/data: rs/1
-	srchead/data: rs/2
-	srclist/selected: :x
-	if tp/selected = 2 [
-		print[ tabi "^-forecast tab is selected: " tp/selected ]
-		gf: getforecast copy/deep td rejoin [ tabi "^-" ] "updateui"
-		forecastdata: renderforecast copy/deep gf
-		forecasttab/data: forecastdata
+getyearbracket: function [] [
+	o: copy []
+	e: copy []
+	sy: now/year - 5
+	ey: now/year + 5
+	repeat n (ey - sy) [
+		either ((sy - 1) + n) = now/year [
+			append o "from this year"
+			append e 0
+		] [
+			append o rejoin [ "from " to-string ((sy - 1) + n) ]
+			append e ((sy - 1) + n)
+		]
 	]
-	if tp/selected = 3 [ 
-		print[ tabi "^-graph tab is selected: " tp/selected ]
-		gf: getforecast copy/deep td rejoin [ tabi "^-" ] "updateui"
-		graphit gf
-	]
-	print [ tabi "updateui function is done." ]
+	out: reduce [o e]
+	probe out
+    out
 ]
 
 catdata: getcats copy/deep td "^-" "initial_forecast"
+groupdata: getgroups copy/deep td "^-" "initial_forecast"
 gf: getforecast copy/deep td "^-" "initial_forecast"
-forecastdata: renderforecast copy/deep gf "^-" "initial_forecast"
-rs: rendersrc copy/deep td "^-" "initial_forecast"
-srcdata: rs/1
-heddata: rs/2
-rawdata: renderraw copy/deep td "^-" "initial_forecast"
-;foreach p srcdata[ probe p ]
+rendforecast: renderforecast copy/deep gf "^-" "initial_forecast"
+rendrules: rendersrc copy/deep td "^-" "initial_forecast"
+rendraw: renderraw copy/deep td "^-" "initial_forecast"
+;foreach p rendrules [ probe p ]
+yearbracket: getyearbracket
 amsetting: true
 
 graphit: function [ d tabi tabf ] [
@@ -436,167 +460,189 @@ graphit: function [ d tabi tabf ] [
 	print [ tabi "graphit function is done." ]
 ]
 
-view [
-	Title "test"
-	below
-	tp: tab-panel 1000x300 [
-		"setup" [
-			below
-			srchead: field font-name "courier new" font-size 9 980x20 data heddata
-			srclist: text-list font-name "courier new" font-size 9 980x220 data srcdata
-			on-change [
-				print["srclist: on-change triggered..."]
-				amsetting: false
-				x: srclist/selected
-				;print[ "	srclist/selected = " x ]
-				srow: copy/deep (pick td x)
-				ofsetenter/text: srow/1
-				nthenter/text: srow/2
-				wkdenter/selected: index? find wkdenter/data srow/3
-				nthmonthenter/text: srow/4
-				frommonthenter/text: srow/5
-				fromyearenter/text: srow/6
-				amtenter/text: srow/7
-				trname/text: srow/10
-				catenter/selected: index? find catenter/data srow/8
-				amsetting: true
-			]
-		]
-		"forecast" [
-			below
-			forecasttab: text-list font-name "courier new" font-size 10 980x250 data forecastdata
-		]
-		"graph" [
-  			below   
-			canvas: base 980x220 white
-			do [
-				canvas/draw: copy []
-			]
-		]
-		"raw data" [
-			below
-			rawlist: text-list font-name "courier new" font-size 9 980x250 data rawdata
-		]
-		"calendar" [
-			across
-			text "year"
-		    calyear: field 100x20 
-			text "month"
-			calprev: button 40x20 "<" 
-			caltoday: button 65x20 "this month" 
-			calnext: button 40x20 ">" 
-		]
-	]
-	on-change [
-		if event/picked = 2 [
-			print[ "forecasttab is selected: " tp/selected ]
-			gf: getforecast copy/deep td "^-" "tab-panel_change_event"
-			forecastdata: renderforecast copy/deep gf "^-" "tab-panel_change_event"
-			forecasttab/data: forecastdata "^-" "tab-panel_change_event"
-		]
-		if event/picked = 3 [
-			graphit gf "^-" "tab-panel_change_event"
-		]
-	]
-	sp: panel 1000x200 [
+
+changeparam: func [ i s ] [
+	td/:rsidx/:i: s
+	rendrules:  rendersrc copy/deep td "^-" "recurrence_rule_parameter_change_event"
+	rlist/data: rendrules/1
+	rlist/selected: rsidx
+	nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
+	tqq/text: mold nxt/1
+]
+
+
+
+;; parameter pane
+pparm: compose/deep [
+	ppane: panel loose with [ offset 0x0 ] [
 		across
-		text "description" right
-		trname: field 400x20
-		on-change [
-			if amsetting [
-				print[ "trname: on-enter triggered..." ]
-				x: srclist/selected
-				print[ "renaming " td/:x/8 " to " trname/text ]
-				td/:x/8: trname/text
-				updateui x "^-" "trname_change_event"
+		text 140x30 "Transaction Rule"
+		fname: field 300x30 [ unless noupdate [ changeparam 11 face/text ] ]
+		text 80x30 "Amount"
+		famt: field 100x30 [ unless noupdate [ changeparam 8 face/text ] ]
+		return
+		text 140x30 "Group"
+		lgrp: drop-down 200x30 data groupdata [ unless noupdate [ changeparam 10 (quote face/data/(face/selected)) ]]
+		text 80x30 "Category"
+		lcat: drop-down 200x30 data catdata [ unless noupdate [ changeparam 9 (quote face/data/(face/selected)) ]]
+		return
+		pad 0x10 text 140x30 "Recurrance"
+		return
+		panel black [
+		    leach: drop-list data [ "the" "every" "every 2" "every 3" "every 4" "every 5" "every 6" "every 7" "every 8" "every 9" "every 10" "every 11" "every 12" "every 13" "every 14" "every 15" "every 16" "every 17" "every 18" "every 19" "every 20" "every 21" "every 22" "every 23" "every 24" "every 25" "every 26" "every 27" "every 28" "every 29" "every 30" "every 31" ] select 1	[ 
+			    unless noupdate [ changeparam 1 (quote (to-string (face/selected - 1))) ]
 			]
-		]
-		text "amount" right
-		amtenter: field
-		on-change [
-			if amsetting [
-				print[ "amtenter: on-enter triggered..." ]
-				x: srclist/selected
-				td/:x/7: amtenter/text
-				updateui x "^-" "amtenter_change_event"
+		    lday: drop-list data [ "" "2nd" "3rd" "4th" "5th" "6th" "7th" "8th" "9th" "10th" "11th" "12th" "13th" "14th" "15th" "16th" "17th" "18th" "19th" "20th" "21st" "22nd" "23rd" "24th" "25th" "26th" "27th" "28th" "29th" "30th" "31st" "last" ] [
+			    unless noupdate [ changeparam 2 (quote (to-string face/selected)) ]
 			]
-		]
-		text "category" right
-		catenter: drop-down 100x20 data catdata
-		on-change [
-			if amsetting [
-				print[ "catenter: on-change triggered..." ]
-				x: srclist/selected
-				td/:x/8: catenter/text
-				updateui x "^-" "catenter_change_event"
+			lweekday: drop-list data [ "day" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday" "weekday closest to the" "weekday on or before the" "weekday on or after the"] [ 
+				if face/selected > 8 [
+					if lday/offset/x < face/offset/x [ 
+						ldidx: lday/selected
+						face/offset/x: lday/offset/x lday/offset/x: face/offset/x + face/size/x  + 10
+						lday/data/1: "1st"
+						lday/selected: ldidx
+					]
+				]
+				if face/selected < 9 [ 
+					if lday/offset/x > face/offset/x [ 
+						ldidx: lday/selected
+						lday/offset/x: face/offset/x face/offset/x: lday/offset/x + lday/size/x  + 10
+						lday/data/1: ""
+						lday/selected: ldidx
+					]
+				]
+				unless noupdate [ changeparam 3 (quote (to-string (face/selected - 1))) ]
+			]
+			lfromday: drop-list data [ "" "from the 1st" "from the 2nd" "from the 3rd" "from the 4th" "from the 5th" "from the 6th" "from the 7th" "from the 8th" "from the 9th" "from the 10th" "from the 11th" "from the 12th" "from the 13th" "from the 14th" "from the 15th" "from the 16th" "from the 17th" "from the 18th" "from the 19th" "from the 20th" "from the 21st" "from the 22nd" "from the 23rd" "from the 24th" "from the 25th" "from the 26th" "from the 27th" "from the 28th" "from the 29th" "from the 30th" "from the 31st" ] [
+				unless noupdate [ changeparam 4 (quote (to-string face/selected)) ]
+			]
+			return
+		    lnthmonth: drop-list data [ "of" "of every month from" "of every 2nd month from" "of every 3rd month from" "of every 4th month from" "of every 5th month from" "of every 6th month from" "of every 7th month from" "of every 8th month from" "of every 9th month from" "of every 10th month from" "of every 11th month from" "of" "of"] [
+				unless noupdate [ changeparam 5 (quote (to-string (face/selected - 1))) ]
+			]
+			lfrommonth: drop-list data [ "this month" "January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December" ] [
+				unless noupdate [ changeparam 6 (quote (to-string (face/selected - 1))) ]
+			]
+			lfromyear: drop-list data yearbracket/1 [
+				unless noupdate [ changeparam 7 (quote (to-string yearbracket/2/(face/selected))) ]
 			]
 		]
 		return
-		text "offset" right
-		ofsetenter: field
-		on-change [
-			if amsetting [
-				print[ "ofsetenter: on-enter triggered..." ]
-				x: srclist/selected
-				print[ "changing " td/:x/1 " to " face/text ]
-				td/:x/1: face/text
-				updateui x "^-" "offsetenter_change_event"
-			]
-		]
-		nthlabel: text "nth day" right
-		nthenter: field
-		on-change [
-			if amsetting [
-				print[ "nthenter: on-enter triggered..." ]
-				x: srclist/selected
-				td/:x/2: nthenter/text
-				updateui x  "^-" "nthenter_change_event"
-			]
-		]
-		text "weekday" right		
-		wkdenter: drop-list 100x20 data [ "0" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday" "nowke" "nowke_b" "nowke_a" ]
-		on-change [
-			if amsetting [
-				print[ "wkdenter: on-change triggered..." ]
-				x: srclist/selected
-				selfname: pick face/data face/selected
-				print[ "^-wkdenter is changing " td/:x/3 " to " face/selected ]
-				td/:x/3: face/selected
-				updateui x  "^-" "wkdenter_change_event"
-			]
-		]
-		return
-		text "nth month" right
-		nthmonthenter: field
-		on-change [
-			if amsetting [
-				print[ "nthmonthenter: on-enter triggered..." ]
-				x: srclist/selected
-				td/:x/4: face/text
-				updateui x   "^-" "nthmonthenter_change_event"
-			]
-		]
-		text "from month" right
-		frommonthenter: field
-		on-change [
-			if amsetting [
-				print[ "frommonthenter: on-enter triggered..." ]
-				x: srclist/selected
-				td/:x/5: face/text
-				updateui x  "^-" "frommonthenter_change_event"
-			]
-		]
-		text "from year" right
-		fromyearenter: field
-		on-change [
-			if amsetting [
-				print[ "fromyearenter: on-enter triggered..." ]
-				x: srclist/selected
-				td/:x/6: face/text
-				updateui x  "^-" "fromyearenter_change_event"
-			]
-		]
-		;space 100x0
-		;saveit: button "save all transactions" [savetd td "-^" "saveit_event"]
+		text 140x30 "next transaction is:"
+		tqq: text 700x30
+	] react [ 
+		(to-set-path [face offset x ]) 0
+	    (to-set-path [face offset y ]) min max -100 (to-path [face offset y]) 100 
 	]
+]
+probe pparm
+
+;; transaction rule pane
+prule: compose/deep [
+	below
+   	rlist: text-list 760x310 data rendrules/1 select 1 font-name "consolas" font-size 8 font-color 80.180.255 with [ offset: 0x0 ] [
+		noupdate: true
+		rsidx: face/selected
+		probe rsidx
+		probe td/:rsidx/1
+		eidx: rsidx + 1
+	   	leach/selected: (quote (to-integer td/:rsidx/1)) + 1
+		lday/selected: min (quote (to-integer td/:rsidx/2)) 32
+		lweekday/selected: (quote (to-integer td/:rsidx/3)) + 1
+		if lweekday/selected > 1 [
+			if lweekday/selected < 9 [
+				if lday/selected > 5 [
+					lday/selected: 32
+				]
+			]
+		]
+		lfromday/selected: (quote (to-integer td/:rsidx/4)) + 1
+		lnthmonth/selected: (quote (to-integer td/:rsidx/5)) + 1
+		lfrommonth/selected: (quote (to-integer td/:rsidx/6)) + 1
+		yy: "this year"
+		parse td/:rsidx/7 [to "2" copy yy to end ]
+	    yy: rejoin [ "from " yy ]
+		probe yy
+		lfromyear/selected: index? find lfromyear/data yy
+	    probe td/:rsidx/8
+		famt/text: td/:rsidx/8
+		lcat/selected: index? find lcat/data td/:rsidx/9
+		lgrp/selected: index? find lgrp/data td/:rsidx/10
+		fname/text: td/:rsidx/11
+		probe td/:rsidx
+		nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
+		probe nxt/1
+		tqq/text: mold nxt/1
+		noupdate: false
+	]
+]
+
+view [
+	Title "fulltardie"
+	below
+	aa: panel 800x380 [
+		below
+		aah: panel 50.50.50 790x55 [
+			aaddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+				switch face/selected [
+					1 [ noupdate: true aap/pane: layout/only prule rlist/size/x: aa/size/x - 30 rlist/size/y: aa/size/y - 90]
+					2 [ noupdate: true aap/pane: layout/only pparm ]
+				]
+			]
+		]
+		aap: panel 790x500 [ ]
+	]
+	hh: panel 800x10 40.40.40 loose draw [ ] react [
+		face/offset/x: 10
+		face/offset/y: min (max 200 face/offset/y) 600
+		bb/offset/y: face/offset/y + 10 
+		bb/size/y: 810 - bb/offset/y
+		aa/size/y: face/offset/y - 10
+		attempt [ aah/size/x: face/size/x - 20 ]
+		attempt [ aap/size/x: face/size/x - 20 ]
+		attempt [ rlist/size/x: face/size/x - 20 ]
+	    face/draw: compose/deep [
+			pen off
+		   	fill-pen 100.100.100
+			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) - 10) 5]) 3 3 
+			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5)) 5]) 3 3
+			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) + 10) 5]) 3 3 
+		] 
+	]
+	bb: panel 800x380 [
+		below
+		bbh: panel 50.50.50 790x55 [
+			bbddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+				switch face/selected [
+					1 [ noupdate: true bbp/pane: layout/only prule rlist/size/x: bb/size/x - 30 rlist/size/y: bb/size/y - 90]
+					2 [ noupdate: true bbp/pane: layout/only pparm ]
+				]
+			]
+		]
+		bbp: panel 790x500 [ ]
+	]
+	return
+	vv: panel 10x800 40.40.40 loose draw [ ] react [ 
+		face/offset/y: 10 
+		face/offset/x: min (max 500 face/offset/x) 900 
+		aa/size/x: face/offset/x - 10 
+		bb/size/x: face/offset/x - 10 
+		cc/offset/x: face/offset/x + 10 
+		cc/size/x: 1120 - cc/offset/x 
+		hh/size/x: face/offset/x - 10
+		attempt [ aap/size/x: face/offset/x - 20 ]
+		attempt [ aah/size/x: face/offset/x - 20 ]
+		attempt [ rlist/size/x: face/offset/x - 40 ]
+		attempt [ rlist/size/y: aa/size/y - 90 ]
+	    face/draw: compose/deep [ 
+			pen off 
+		   	fill-pen 100.100.100
+			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) - 10)]) 3 3 
+			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5))]) 3 3
+			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) + 10)]) 3 3 
+		] 
+	]
+	return
+	cc: panel 280x800 []
 ]
