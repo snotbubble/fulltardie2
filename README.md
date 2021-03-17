@@ -2,15 +2,16 @@
 - recuring transaction forecaster
 - uses complex recurrence rules that should cover most cycles
 
+![screenie](./fulltardie2_210317.png)
+
 # todo
 - [X] brain-surgery: swap out the data structure
 - [ ] automatic plain-English translation of the recurrence rules
 - [X] set rule elements by clicking on parts of the English translation
 - [X] 3-pane ui
 - [X] resize panes with dividers
-- [ ] view/face params react to data (currently they are the data)
 - [ ] assign views to panes, allowing for duplication, eg: two graphs.
-- [ ] view panes to have in-situ settings bar
+- [X] view panes to have in-situ settings bar
 - [ ] update i/o
 - [ ] scenario switcher
 
@@ -19,12 +20,13 @@ rule list view
 - [ ] rule list lower space (last-entry fights with the horizontal scrollabr)
 
 selected-rule parameters view
-- [ ] auto re-arrange wigets to fit panel
-- [ ] fix any off-by-one errors
+- [X] auto re-arrange wigets to fit panel
+- [X] fix any off-by-one errors
 - [ ] clarify display of :each nth weekday
 
 forecast list view
-- [ ] test existing
+- [X] test existing
+- [ ] sync selection to rule that generated the entry
 
 graph view
 - [ ] re-write it
