@@ -23,6 +23,7 @@ selected-rule parameters view
 - [X] auto re-arrange wigets to fit panel
 - [X] fix any off-by-one errors
 - [ ] clarify display of :each nth weekday
+- [ ] optimize layout function
 
 forecast list view
 - [X] test existing
