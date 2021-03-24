@@ -2,11 +2,11 @@
 - recuring transaction forecaster
 - uses complex recurrence rules that should cover most cycles
 
-![screenie](./fulltardie2_210317.png)
+![screenie](./fulltardie2_screenie_210324.png)
 
 # todo
 - [X] brain-surgery: swap out the data structure
-- [ ] automatic plain-English translation of the recurrence rules
+- [X] automatic plain-English translation of the recurrence rules
 - [X] set rule elements by clicking on parts of the English translation
 - [X] 3-pane ui
 - [X] resize panes with dividers
@@ -22,7 +22,7 @@ rule list view
 selected-rule parameters view
 - [X] auto re-arrange wigets to fit panel
 - [X] fix any off-by-one errors
-- [ ] clarify display of :each nth weekday
+- [X] clarify display of :each nth weekday
 - [ ] optimize layout function
 
 forecast list view
