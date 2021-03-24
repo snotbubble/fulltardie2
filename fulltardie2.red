@@ -11,15 +11,14 @@ Red [needs: 'view]
 ;; - : dropped it
 ;;
 ;; TODO: [!] handle simple day-counting in findnextdate
-;; TODO: [!] start plain-english translator
-;; TODO: [!] panel switchers
-;; TODO: [ ] fix every-nth every-day logic
-;; TODO: [ ] fix from-day
-;; TODO: [ ] re-arrange params to fit panel
+;; TODO: [!] fix every-nth every-day logic
+;; TODO: [!] fix from-day
 ;; TODO: [ ] rule list header ui
 ;; TODO: [ ] add blank line to bottom of rule list & hadle it
-;; TODO: [ ] test forecast ui
 ;; TODO: [ ] rewrite graph ui
+
+;; magic numbers
+tabheight: 38	;; with consolas 12 bold in it
 
 
 ;; rule selection index, used everywhere:
@@ -461,39 +460,41 @@ graphit: function [ d tabi tabf ] [
 ]
 
 
-changeparam: func [ i s ] [
+changeparam: func [ i s tabi tabf ] [
+	print [ tabi "changeparam func triggered by " tabf "..." ]
 	td/:rsidx/:i: s
-	rendrules:  rendersrc copy/deep td "^-" "recurrence_rule_parameter_change_event"
+	rendrules:  rendersrc copy/deep td tabi "recurrence_rule_parameter_change_event"
 	rlist/data: rendrules/1
 	rlist/selected: rsidx
-	nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
+	nxt: findnextdate td/:rsidx tabi "rlist_change_event"
 	tqq/text: to-string nxt/1/1
+	print [ tabi "changeparam func is done." ] 
 ]
 
 
 
 ;; parameter pane
 pparm: compose/deep [
-	ppane: panel loose [
+	ppane: panel font-name "consolas" font-size 8 font-color 128.128.128 loose [
 		below
 	    sqname: panel extra [ sid: 'sqname ampanel: true ] [
 			tname: text 80x30 "Name" extra [ sid: 'tname ]
-		  	fname: field 520x30 extra [ sid: 'fname]  [ unless noupdate [ changeparam 11 face/text ] ]
+		  	fname: field 520x30 extra [ sid: 'fname ]  [ unless noupdate [ changeparam 11 face/text "^-" "ppane name field change event" ]]
 		]
 		sqgroup: panel extra [ sid: 'sqgroup ampanel: true ] [
 			tgrp: text 80x30 "Group" extra [ sid: 'tgrp ]
-			lgrp: drop-down 100x30 extra [ sid: 'lgrp ] data groupdata [ unless noupdate [ changeparam 10 (quote face/data/(face/selected)) ]]
+			lgrp: drop-down 100x30 extra [ sid: 'lgrp ] data groupdata [ unless noupdate [ changeparam 10 (quote face/data/(face/selected)) "^-" "ppane group list change event" ]]
 		]
 		sqcat: panel extra [ sid: 'sqcat ampanel: true ] [
 			tcat: text 80x30 "Category" extra [ sid: 'tcat ]
-			lcat: drop-down 100x30 data catdata extra [ sid: 'lcat ] [ unless noupdate [ changeparam 9 (quote face/data/(face/selected)) ]]
+			lcat: drop-down 100x30 data catdata extra [ sid: 'lcat ] [ unless noupdate [ changeparam 9 (quote face/data/(face/selected)) "^-" "ppane cat list change event" ]]
 		]
 		sqamt: panel extra [ sid: 'sqamt ampanel: true ] [
 			tamt: text 80x30 "Amount" extra [ sid: 'tamt ]
-			famt: field 100x30 extra [ sid: 'famt ] [ unless noupdate [ changeparam 8 face/text ] ]
+			famt: field 100x30 extra [ sid: 'famt ] [ unless noupdate [ changeparam 8 face/text "^-" "ppane amount field change event" ] ]
 		]
 		dorecur: panel extra [ sid: 'dorecur ampanel: true ] [
-	    	trecur: text 140x30 "Recurrance" extra [ sid: 'trecur ]
+	    	trecur: text 140x30 "Recurrence" extra [ sid: 'trecur ]
 			btest: button 200x30 "test generic layout" extra [ sid: 'trecur ] [ 
 				sw: now/time/precise 
 				layoutpanefaces ppane/parent/size/x 10 10 squishme 
@@ -503,46 +504,30 @@ pparm: compose/deep [
 			]
 		]
 		squishme: panel 50.50.50 extra [ sid: 'squishme ampanel: true ] [
-		    leach: drop-list extra [ sid: 'leach ] data [ "the" "every" "every 2" "every 3" "every 4" "every 5" "every 6" "every 7" "every 8" "every 9" "every 10" "every 11" "every 12" "every 13" "every 14" "every 15" "every 16" "every 17" "every 18" "every 19" "every 20" "every 21" "every 22" "every 23" "every 24" "every 25" "every 26" "every 27" "every 28" "every 29" "every 30" "every 31" ] select 1	[ 
-			    unless noupdate [ changeparam 1 (quote (to-string (face/selected - 1))) ]
+		    leach: drop-list extra [ sid: 'leach idx: 1 ] data [ "the" "every" "every 2" "every 3" "every 4" "every 5" "every 6" "every 7" "every 8" "every 9" "every 10" "every 11" "every 12" "every 13" "every 14" "every 15" "every 16" "every 17" "every 18" "every 19" "every 20" "every 21" "every 22" "every 23" "every 24" "every 25" "every 26" "every 27" "every 28" "every 29" "every 30" "every 31" ] select 1	[ 
+			    unless noupdate [ changeparam 1 (quote (to-string (face/selected - 1))) "^-" "ppane each list change event" ]
 			]
-		    lday: drop-list extra [ sid: 'lday ] data [ "" "2nd" "3rd" "4th" "5th" "6th" "7th" "8th" "9th" "10th" "11th" "12th" "13th" "14th" "15th" "16th" "17th" "18th" "19th" "20th" "21st" "22nd" "23rd" "24th" "25th" "26th" "27th" "28th" "29th" "30th" "31st" "last" ] [
-			    unless noupdate [ changeparam 2 (quote (to-string face/selected)) ]
+		    lday: drop-list extra [ sid: 'lday idx: 2 ] data [ "" "2nd" "3rd" "4th" "5th" "6th" "7th" "8th" "9th" "10th" "11th" "12th" "13th" "14th" "15th" "16th" "17th" "18th" "19th" "20th" "21st" "22nd" "23rd" "24th" "25th" "26th" "27th" "28th" "29th" "30th" "31st" "last" ] [
+			    unless noupdate [ changeparam 2 (quote (to-string face/selected)) "^-" "ppane day list change event" ]
 			]
-			lweekday: drop-list extra [ sid: 'lweekday ] data [ "day" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday" "weekday closest to the" "weekday on or before the" "weekday on or after the"] [ 
-				if face/selected > 8 [
-					if lday/offset/x < face/offset/x [ 
-						ldidx: lday/selected
-						face/offset/x: lday/offset/x lday/offset/x: face/offset/x + face/size/x  + 10
-						lday/data/1: "1st"
-						lday/selected: ldidx
-					]
-				]
-				if face/selected < 9 [ 
-					if lday/offset/x > face/offset/x [ 
-						ldidx: lday/selected
-						lday/offset/x: face/offset/x face/offset/x: lday/offset/x + lday/size/x  + 10
-						lday/data/1: ""
-						lday/selected: ldidx
-					]
-				]
-				unless noupdate [ changeparam 3 (quote (to-string (face/selected - 1))) ]
+			lweekday: drop-list extra [ sid: 'lweekday idx: 3 ] data [ "day" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday" "weekday closest to the" "weekday on or before the" "weekday on or after the"] [ 
+				unless noupdate [ changeparam 3 (quote (to-string (face/selected - 1))) "^-" "ppane weekday change event" ]
 			]
-			lfromday: drop-list extra [ sid: 'lfromday ] data [ "" "from the 1st" "from the 2nd" "from the 3rd" "from the 4th" "from the 5th" "from the 6th" "from the 7th" "from the 8th" "from the 9th" "from the 10th" "from the 11th" "from the 12th" "from the 13th" "from the 14th" "from the 15th" "from the 16th" "from the 17th" "from the 18th" "from the 19th" "from the 20th" "from the 21st" "from the 22nd" "from the 23rd" "from the 24th" "from the 25th" "from the 26th" "from the 27th" "from the 28th" "from the 29th" "from the 30th" "from the 31st" ] [
-				unless noupdate [ changeparam 4 (quote (to-string face/selected)) ]
+			lfromday: drop-list extra [ sid: 'lfromday idx: 4 ] data [ "" "from the 1st" "from the 2nd" "from the 3rd" "from the 4th" "from the 5th" "from the 6th" "from the 7th" "from the 8th" "from the 9th" "from the 10th" "from the 11th" "from the 12th" "from the 13th" "from the 14th" "from the 15th" "from the 16th" "from the 17th" "from the 18th" "from the 19th" "from the 20th" "from the 21st" "from the 22nd" "from the 23rd" "from the 24th" "from the 25th" "from the 26th" "from the 27th" "from the 28th" "from the 29th" "from the 30th" "from the 31st" ] [
+				unless noupdate [ changeparam 4 (quote (to-string face/selected)) "^-" "ppane fromday list change event" ]
 			]
-		    lnthmonth: drop-list extra [ sid: 'lnthmonth ] data [ "of" "of every month from" "of every 2nd month from" "of every 3rd month from" "of every 4th month from" "of every 5th month from" "of every 6th month from" "of every 7th month from" "of every 8th month from" "of every 9th month from" "of every 10th month from" "of every 11th month from" "of" "of"] [
-				unless noupdate [ changeparam 5 (quote (to-string (face/selected - 1))) ]
+		    lnthmonth: drop-list extra [ sid: 'lnthmonth idx: 5 ] data [ "of" "of every month from" "of every 2nd month from" "of every 3rd month from" "of every 4th month from" "of every 5th month from" "of every 6th month from" "of every 7th month from" "of every 8th month from" "of every 9th month from" "of every 10th month from" "of every 11th month from" "of" "of"] [
+				unless noupdate [ changeparam 5 (quote (to-string (face/selected - 1))) "^-" "ppane nthmonth list change event" ]
 			]
-			lfrommonth: drop-list extra [ sid: 'lfrommonth ] data [ "this month" "January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December" ] [
-				unless noupdate [ changeparam 6 (quote (to-string (face/selected - 1))) ]
+			lfrommonth: drop-list  extra [ sid: 'lfrommonth idx: 6 ] data [ "this month" "January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December" ] [
+				unless noupdate [ changeparam 6 (quote (to-string (face/selected - 1))) "^-" "ppane frommonth list change event" ]
 			]
-			lfromyear: drop-list extra [ sid: 'lfromyear ] data yearbracket/1 [
-				unless noupdate [ changeparam 7 (quote (to-string yearbracket/2/(face/selected))) ]
+			lfromyear: drop-list extra [ sid: 'lfromyear idx: 7 ] data yearbracket/1 [
+				unless noupdate [ changeparam 7 (quote (to-string yearbracket/2/(face/selected))) "^-" "ppane fromyear list change event" ]
 			]
 		]
 		preview: panel extra [ sid: 'preview ampanel: true ] [
-			tql: text 140x30 "next transaction:" extra [ sid: 'tql ]
+			tql: text 140x30 "next transaction:"font-name "consolas" font-size 10 font-color 128.128.128  extra [ sid: 'tql ] 
 			tqq: text 140x30 font-name "consolas" font-size 14 font-color 80.180.255 extra [ sid: 'tqq ] 
 		]
 	] on-drag [ 
@@ -562,14 +547,12 @@ pforecast: compose/deep [
 ;; transaction rule pane
 prule: compose/deep [
 	below
-   	rlist: text-list 760x310 data rendrules/1 select 1 font-name "consolas" font-size 8 font-color 80.180.255 with [ offset: 0x0 ] [
+   	rlist: text-list 760x310 data rendrules/1 select 1 font-name "consolas" font-size 8 font-color 255.180.80 with [ offset: 0x0 ] [
 		noupdate: true
 		squish: false
 		attempt [ none? ppane squish: true ]
 		if squish [layoutpanefaces ppane/parent/size/x 10 10 squishme ]
 		rsidx: face/selected
-		probe rsidx
-		probe td/:rsidx/1
 		eidx: rsidx + 1
 	   	leach/selected: (quote (to-integer td/:rsidx/1)) + 1
 		lday/selected: min (quote (to-integer td/:rsidx/2)) 32
@@ -581,23 +564,25 @@ prule: compose/deep [
 				]
 			]
 		]
+		either  lweekday/selected > 8 [ 
+			lweekday/extra/idx: 2 lday/extra/idx: 3 
+		] [ 
+			lweekday/extra/idx: 3 lday/extra/idx: 2 
+		]
 		lfromday/selected: (quote (to-integer td/:rsidx/4)) + 1
 		lnthmonth/selected: (quote (to-integer td/:rsidx/5)) + 1
 		lfrommonth/selected: (quote (to-integer td/:rsidx/6)) + 1
 		yy: "this year"
 		parse td/:rsidx/7 [to "2" copy yy to end ]
 	    yy: rejoin [ "from " yy ]
-		probe yy
 		lfromyear/selected: index? find lfromyear/data yy
-	    probe td/:rsidx/8
 		famt/text: td/:rsidx/8
 		lcat/selected: index? find lcat/data td/:rsidx/9
 		lgrp/selected: index? find lgrp/data td/:rsidx/10
 		fname/text: td/:rsidx/11
-		probe td/:rsidx
 		nxt: findnextdate td/:rsidx "^-" "rlist_change_event"
-		probe nxt/1
 		tqq/text: to-string nxt/1/1
+	   	nudgev
 		noupdate: false
 	]
 ]
@@ -630,21 +615,53 @@ layoutpanefaces: function [ cx ox oy pp ] [
 
 	su: 0
 	n: 1
-    row: copy []
-	rows: copy/deep reduce [ row row row row row row row ]
+    ;row: copy []
+	rows: copy/deep [ [] [] [] [] [] [] [] ]
+	;probe rows
 	r: 1
 
 ;; put faces into rows of < cx size in x
-
-    foreach-face pp [
-		su: su + face/size/x
-		either su >= (cx - 30) [ 
-		    r: r + 1 append rows/:r face su: face/size/x
-		] [
-			append rows/:r face
+	
+	either pp/extra/sid = 'squishme [
+		;print [ "found squish pane" ]
+		temps: copy []
+		i: 1
+		foreach-face pp [
+			;print [ "checking face idx: " face/extra ]
+		    append temps face 
+			i: i + 1
 		]
-		n: n + 1
+		sort/compare temps func [a b] [
+			case [
+				a/extra/idx > b/extra/idx [-1] 
+				a/extra/idx < b/extra/idx [1]
+				a/extra/idx = b/extra/idx [0]
+			]
+		]
+		i: 1
+		foreach f temps [
+			su: su + f/size/x
+			either su >= (cx - 30) [ 
+				r: r + 1 append rows/:r f su: f/size/x
+			] [
+				append rows/:r f
+			]
+			n: n + 1
+		]		
+	] [
+		i: 1
+		foreach-face pp [
+			su: su + face/size/x
+			either su >= (cx - 30) [ 
+				r: r + 1 append rows/:r face 
+				su: face/size/x
+			] [
+			    append rows/:r face
+			]
+			n: n + 1
+		]
 	]
+	;probe rows
 
 ;; layout faces per row
 
@@ -669,9 +686,9 @@ layoutpanefaces: function [ cx ox oy pp ] [
 	pp/size/y: rk
 	;append/only out compose/deep [ (to-set-path compose/deep [ (reduce pp/extra/sid) size y]) (rk) ] 
 
-	print [ "pp/size/y = " pp/size/y ]
-	print [ "pp/parent/size/y = " pp/parent/size/y ]
-	print [ "pp/parent/parent/size/y = " pp/parent/parent/size/y ]
+	;print [ "pp/size/y = " pp/size/y ]
+	;print [ "pp/parent/size/y = " pp/parent/size/y ]
+	;print [ "pp/parent/parent/size/y = " pp/parent/parent/size/y ]
 
 	;pp/parent/size/y: max pp/parent/size/y (pp/offset/y + rk)
 	;append/only out compose/deep [ (to-set-path compose/deep [ (reduce pp/extra/sid) parent size y]) (max pp/parent/size/y (pp/offset/y + rk)) ] 
@@ -701,188 +718,232 @@ layoutpanefaces: function [ cx ox oy pp ] [
 	]
 
 ;; special cases
-	print [ "panel sid = " pp/extra/sid ]
+	;print [ "panel sid = " pp/extra/sid ]
 	if pp/extra/sid = 'sqname [
-		print [ "adjusting faces in sqname " ]
-		tname/size/x: pp/size/x
-		fname/size/x: pp/size/x
+		;print [ "adjusting faces in sqname " ]
+		tname/size/x: pp/size/x - 10
+		fname/size/x: pp/size/x - 10
 	]
 
 	;probe out
 	;foreach c out [ do c ]
 ]
 
-view/tight [
+nudgev: function [ ] [
+	vv/offset/x: min (max 200 vv/offset/x) (fbar/size/x - 300)
+	vv/offset/y: fbar/size/y
+	cc/offset/x: vv/offset/x + 10 
+	aa/size/x: vv/offset/x
+	bb/size/x: vv/offset/x
+	cc/size/x: tp/size/x - (vv/offset/x + vv/size/x )
+	hh/size/x: vv/offset/x
+	aah/offset/x: 0
+	bbh/offset/x: 0
+	cch/offset/x: 0
+	aah/size/x: aa/size/x
+	bbh/size/x: bb/size/x
+	cch/size/x: cc/size/x
+	aap/offset/x: 0
+	bbp/offset/x: 0
+	ccp/offset/x: 0
+	aap/size/x: aa/size/x
+	bbp/size/x: bb/size/x
+	ccp/size/x: cc/size/x
+	attempt [ rlist/size/x: rlist/parent/size/x - 20 ]
+	attempt [ folist/size/x: folist/parent/size/x - 20 ]
+	squish: false
+	attempt [ none? ppane squish: true ]
+	if squish [
+		ppane/offset: 0x0
+		;ppane/size/x: ppane/parent/parent/size/x
+		;ppane/size/y: max ppane/size/y (ppane/parent/size/y - 55 )
+		layoutpanefaces ppane/parent/size/x 10 10 sqname 
+		layoutpanefaces ppane/parent/size/x 10 10 sqgroup 
+		layoutpanefaces ppane/parent/size/x 10 10 sqcat 
+		layoutpanefaces ppane/parent/size/x 10 10 sqamt 
+		layoutpanefaces ppane/parent/size/x 10 10 dorecur 
+		layoutpanefaces ppane/parent/size/x 10 10 squishme
+		layoutpanefaces ppane/parent/size/x 10 10 preview
+		ppane/size/y: max ppane/size/y (tqq/offset/y + 40)
+	]
+	vv/draw: compose/deep [ 
+		pen off 
+		fill-pen 100.100.100
+		circle (to-pair compose/deep [5 (to-integer (vv/size/y * 0.5) - 10)]) 2 2 
+		circle (to-pair compose/deep [5 (to-integer (vv/size/y * 0.5))]) 2 2
+		circle (to-pair compose/deep [5 (to-integer (vv/size/y * 0.5) + 10)]) 2 2 
+	]
+]
+
+nudgeh: function [ ] [
+	hh/offset/x: 0
+	hh/offset/y: min (max 200 hh/offset/y) (vv/size/y - 200)
+	bb/offset/y: hh/offset/y + 10
+	aa/size/y: (hh/offset/y - fbar/size/y)
+	bb/size/y: (vv/size/y - (hh/offset/y + 10)) + fbar/size/y
+	cc/size/y: vv/size/y
+	aah/offset/y: 0
+	bbh/offset/y: 0
+	cch/offset/y: 0
+	aap/offset/y: aah/size/y + aah/offset/y
+	bbp/offset/y: bbh/size/y + bbh/offset/y
+	ccp/offset/y: cch/size/y + cch/offset/y
+	aap/size/y: aa/size/y - aah/size/y
+	bbp/size/y: bb/size/y - bbh/size/y
+	ccp/size/y: cc/size/y - cch/size/y
+	attempt [ rlist/size/y: rlist/parent/size/y - 20 ]
+	attempt [ folist/size/y: folist/parent/size/y - 20 ]
+	hh/draw: compose/deep [
+		pen off
+		fill-pen 100.100.100
+		circle (to-pair compose/deep [(to-integer (hh/size/x * 0.5) - 10) 5]) 2 2 
+		circle (to-pair compose/deep [(to-integer (hh/size/x * 0.5)) 5]) 2 2
+		circle (to-pair compose/deep [(to-integer (hh/size/x * 0.5) + 10) 5]) 2 2 
+	]
+]
+
+view/tight/flags/options [
 	Title "fulltardie"
 	below
-	aa: panel 800x380 [
-		below
-		aah: panel 50.50.50 790x55 with [ offset: 0x0 ] [
-			aaddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
-				switch face/selected [
-					1 [ noupdate: true aap/pane: layout/only prule rlist/offset: 0x0 rlist/size/x: aa/size/x rlist/size/y: aa/size/y - 55]
-					2 [ 
-						noupdate: true 
-						aap/pane: layout/only pparm
-						ppane/offset: 0x0
-						;ppane/size/x: ppane/parent/parent/size/x
-						;ppane/size/y: max ppane/size/y (ppane/parent/size/y - 55 )
-						layoutpanefaces ppane/parent/size/x 10 10 sqname 
-						layoutpanefaces ppane/parent/size/x 10 10 sqgroup 
-						layoutpanefaces ppane/parent/size/x 10 10 sqcat 
-						layoutpanefaces ppane/parent/size/x 10 10 sqamt 
-						layoutpanefaces ppane/parent/size/x 10 10 dorecur 
-						layoutpanefaces ppane/parent/size/x 10 10 squishme
-						layoutpanefaces ppane/parent/size/x 10 10 preview
-						ppane/size/y: max ppane/size/y (tqq/offset/y + 40)
-						noupdate: false	
+	tp: tab-panel 800x800 font-name "consolas" font-size 12 font-color 128.128.128 bold [	
+		"forecast" [
+			fbar: panel 800x55 35.35.35 [
+				text 170x30 "scenario" font-name "consolas" font-size 24 font-color 80.80.80 bold
+			]
+			aa: panel 800x800 [
+				below
+				aah: panel 800x55 40.40.40  with [ offset: 0x0 ] [
+					aaddl: drop-list 200x20 font-name "consolas" font-size 10 font-color 128.128.128 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+						switch face/selected [
+							1 [ 
+								noupdate: true 
+								aap/pane: layout/only prule 
+								nudgev nudgeh
+								noupdate: false
+							]
+							2 [ 
+								noupdate: true 
+								aap/pane: layout/only pparm
+							    nudgev nudgeh
+								noupdate: false	
+							]
+							3 [ 
+								noupdate: true 
+								aap/pane: layout/only pforecast
+							    nudgev nudgeh
+								noupdate: false	
+							]
+						]
 					]
 				]
+				aap: panel 800x800 [ ]
 			]
-		]
-		aap: panel 790x500 [ ]
-	]
-	hh: panel 800x10 40.40.40 loose draw [ ] react [
-		face/offset/x: 0
-		face/offset/y: min (max 200 face/offset/y) 600
-		aa/offset/y: 0
-		bb/offset/y: face/offset/y + 10
-		cc/offset/y: 0
-		aa/size/y: face/offset/y
-		bb/size/y: vv/size/y - face/offset/y - 10
-		cc/size/y: vv/size/y
-		aah/offset/y: 0
-		bbh/offset/y: 0
-		cch/offset/y: 0
-		aap/offset/y: 55
-		bbp/offset/y: 55
-		ccp/offset/y: 55
-		aap/size/y: aa/size/y - 55
-		bbp/size/y: bb/size/y - 55
-		ccp/size/y: cc/size/y - 55
-		attempt [ rlist/size/y: rlist/parent/size/y ]
-		attempt [ folist/size/y: folist/parent/size/y ]
-		face/draw: compose/deep [
-			pen off
-		   	fill-pen 100.100.100
-			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) - 10) 5]) 3 3 
-			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5)) 5]) 3 3
-			circle (to-pair compose/deep [(to-integer (face/size/x * 0.5) + 10) 5]) 3 3 
-		] 
-	]
-	bb: panel 800x380 [
-		below
-		bbh: panel 50.50.50 790x55 with [ offset: 0x0 ] [
-			bbddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
-				switch face/selected [
-					1 [ noupdate: true bbp/pane: layout/only prule rlist/offset: 0x0 rlist/size/x: bb/size/x rlist/size/y: bb/size/y - 55]
-					2 [ 
-						noupdate: true 
-						bbp/pane: layout/only pparm
-						ppane/offset: 0x0
-						;ppane/size/x: ppane/parent/parent/size/x
-						;ppane/size/y: max ppane/size/y (ppane/parent/size/y - 55 )
-						layoutpanefaces ppane/parent/size/x 10 10 sqname 
-						layoutpanefaces ppane/parent/size/x 10 10 sqgroup 
-						layoutpanefaces ppane/parent/size/x 10 10 sqcat 
-						layoutpanefaces ppane/parent/size/x 10 10 sqamt 
-						layoutpanefaces ppane/parent/size/x 10 10 dorecur 
-						layoutpanefaces ppane/parent/size/x 10 10 squishme
-						layoutpanefaces ppane/parent/size/x 10 10 preview
-						ppane/size/y: max ppane/size/y (tqq/offset/y + 40)
-						noupdate: false	
-					]
-					3 [
-						noupdate: true
-						bbp/pane: layout/only pforecast folist/offset: 0x0 folist/size/x: bb/size/x folist/size/y: bb/size/y - 55
+			hh: panel 800x10 35.35.35 loose draw [ ] on-drag [
+				nudgeh
+			]
+			bb: panel 800x800 [
+				below
+				bbh: panel 40.40.40 800x55 with [ offset: 0x0 ] [
+					bbddl: drop-list 200x20 font-name "consolas" font-size 10 font-color 128.128.128 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+						switch face/selected [
+							1 [ 
+								noupdate: true 
+								bbp/pane: layout/only prule
+								nudgev nudgeh
+								noupdate: false
+							]
+							2 [ 
+								noupdate: true 
+								bbp/pane: layout/only pparm
+								nudgev nudgeh
+								noupdate: false	
+							]
+							3 [
+								noupdate: true
+								bbp/pane: layout/only pforecast
+								nudgev nudgeh
+								noupdate: false
+							]
+						]
 					]
 				]
+				bbp: panel 800x800 [ ]
+			]
+			return
+			vv: panel 10x800 35.35.35 loose draw [ ] on-drag [ 
+				nudgev
+			]
+			return
+			cc: panel 800x800 [
+				below
+				cch: panel 40.40.40 800x55 [
+					ccddl: drop-list 200x20 font-name "consolas" font-size 10 font-color 128.128.128 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
+						switch face/selected [
+							1 [ 
+								noupdate: true 
+								ccp/pane: layout/only prule 
+								nudgev nudgeh
+								noupdate: false
+							]
+							2 [ 
+								noupdate: true 
+								ccp/pane: layout/only pparm
+							    nudgev nudgeh
+								noupdate: false						
+							]
+							3 [ 
+								noupdate: true 
+								aap/pane: layout/only pforecast
+							    nudgev nudgeh
+								noupdate: false	
+							]
+						]
+					]
+				]
+				ccp: panel 800x800 [ ]
 			]
 		]
-		bbp: panel 790x500 [ ]
+		"report" [
+			rbar: panel 800x55 40.40.40 [ ]
+		]
 	]
-	return
-	vv: panel 10x800 40.40.40 loose draw [ ] on-up [ 
-		squish: false
-		attempt [ none? ppane squish: true ]
-		if squish [
-			ppane/offset: 0x0
-			;ppane/size/x: ppane/parent/parent/size/x
-			;ppane/size/y: max ppane/size/y (ppane/parent/size/y - 55 )
-			layoutpanefaces ppane/parent/size/x 10 10 sqname 
-			layoutpanefaces ppane/parent/size/x 10 10 sqgroup 
-			layoutpanefaces ppane/parent/size/x 10 10 sqcat 
-			layoutpanefaces ppane/parent/size/x 10 10 sqamt 
-			layoutpanefaces ppane/parent/size/x 10 10 dorecur 
-			layoutpanefaces ppane/parent/size/x 10 10 squishme
-			layoutpanefaces ppane/parent/size/x 10 10 preview
-			ppane/size/y: max ppane/size/y (tqq/offset/y + 40)
-	   	]	
-	] react [ 
-		face/offset/y: 0
-		face/offset/x: min (max 500 face/offset/x) 900
-		aa/offset/x: 0
+	do [
+		tp/offset: 0x0
+		fbar/offset: 0x0
+		rbar/offset: 0x0
+		fbar/size/x: tp/size/x
+		rbar/size/x: tp/size/x
+		vv/offset/y: fbar/size/y
+		cc/offset/y: fbar/size/y
 		bb/offset/x: 0
-		cc/offset/x: face/offset/x + 10 
-		aa/size/x: face/offset/x
-		bb/size/x: face/offset/x
-		cc/size/x: cc/parent/size/x - cc/offset/x 
-		hh/size/x: face/offset/x
-		aah/offset/x: 0
-		bbh/offset/x: 0
-		cch/offset/x: 0
-		aah/size/x: aa/size/x
-		bbh/size/x: bb/size/x
-		cch/size/x: cc/size/x
-		aap/offset/x: 0
-		bbp/offset/x: 0
-		ccp/offset/x: 0
-		aap/size/x: aa/size/x
-		bbp/size/x: bb/size/x
-		ccp/size/x: cc/size/x
-		attempt [ rlist/size/x: rlist/parent/size/x ]
-		attempt [ folist/size/x: folist/parent/size/x ]
-		face/draw: compose/deep [ 
-			pen off 
-		   	fill-pen 100.100.100
-			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) - 10)]) 3 3 
-			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5))]) 3 3
-			circle (to-pair compose/deep [5 (to-integer (face/size/y * 0.5) + 10)]) 3 3 
-		]
+		aa/offset/y: fbar/size/y
+		aa/offset/x: 0
+		vv/size/y: tp/size/y - (fbar/size/y + tabheight )
+	   	vv/offset/x: tp/size/x - 310
+		hh/offset/x: 0
+		hh/offset/y: tp/size/y - 350
+		nudgev nudgeh 
 	]
-	return
-	cc: panel 280x800 [
-		below
-		cch: panel 50.50.50 790x55 with [ offset: 0x0 ] [
-			ccddl: drop-list 200x20 data [ "transaction rules" "parameters" "forecast list" "forecast graph" "raw transaction rules" "category/group chart" ] on-change [
-				switch face/selected [
-					1 [ 
-						noupdate: true 
-						ccp/pane: layout/only prule 
-						rlist/offset: 0x0 
-						rlist/size/x: cc/size/x 
-						rlist/size/y: cc/size/y - 55
-						noupdate: false
-					]
-					2 [ 
-						noupdate: true 
-						ccp/pane: layout/only pparm
-						ppane/offset: 0x0
-						;ppane/size/x: ppane/parent/parent/size/x
-						;ppane/size/y: max ppane/size/y (ppane/parent/size/y - 55 )
-						layoutpanefaces ppane/parent/size/x 10 10 sqname 
-						layoutpanefaces ppane/parent/size/x 10 10 sqgroup 
-						layoutpanefaces ppane/parent/size/x 10 10 sqcat 
-						layoutpanefaces ppane/parent/size/x 10 10 sqamt 
-						layoutpanefaces ppane/parent/size/x 10 10 dorecur 
-						layoutpanefaces ppane/parent/size/x 10 10 squishme
-						layoutpanefaces ppane/parent/size/x 10 10 preview
-						ppane/size/y: max ppane/size/y (tqq/offset/y + 40)
-						noupdate: false						
-					]
+] [ resize ] [
+	actors: object [
+		on-resizing: function [ face event ] [
+			;probe face/size
+			if face/size/x > 500 [
+				if face/size/y > 500 [
+				   	tp/offset: 0x0
+				    tp/size: face/size
+					fbar/size/x: tp/size/x
+					rbar/size/x: tp/size/x
+				    vv/size/y: tp/size/y - (fbar/size/y + 38 )
+					vv/offset/x: max 100 (tp/size/x - cc/size/x)
+					hh/offset/y: max 200 (tp/size/y - bb/size/y) - (tabheight + hh/size/y) ; + fbar/size/y)
+					nudgev nudgeh
+;; sanity-checks
+					;print [ "total size: " (bb/size/y + hh/size/y + aa/size/y + fbar/size/y + tabheight) ]
+					;print [ "bb/offset/y: " bb/offset/y " bb/size/y: " bb/size/y " vv/size/y - bb/offset/y: " (vv/size/y - bb/offset/y) " vv/size/y - hh/offset/y: " (vv/size/y - hh/offset/y)]
+					;print [ "bbp/size/y: " bbp/size/y ] 
 				]
 			]
 		]
-		ccp: panel 790x500 [ ]
 	]
 ]
