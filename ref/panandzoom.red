@@ -1,5 +1,8 @@
 Red [ needs 'view ]
 
+;; mouse zooming experiment
+;; panels always scale from 0x0 regardless of where you put them, so doing it the hard way...
+
 tra: 0x0
 coo: 400x400
 mco: 0x0
@@ -84,8 +87,7 @@ view/tight [
 			] on-down [
 				sfacx: (coo/x / 400.0)
 				sfacy: (coo/y / 400.0)
-				print [ "current coord scale factor : " sfacx ]
-				print [ "complemented scale factor : " (1.0 / sfacx) ]
+				print [ "current coord scale : " sfacx ]
 				tra: to-pair reduce [ (to-integer (1.0 * event/offset/x)) (to-integer (1.0 * event/offset/y)) ]
 				print [ "marked coords: " tra ]
 				mco: coo
