@@ -3,8 +3,23 @@ Red [ needs 'view ]
 ;; mouse zooming experiment
 ;; panels always scale from 0x0 regardless of where you put them, so doing it the hard way...
 
-scrpos: 0x0
-grdpos: 0x0
+screenpos: 0x0				; selection pos in screen space
+screenscaled: 0x0			; scaled selection pos
+screenoffset: 0x0			; translated selection pos
+memscreenpos: 0x0			; memorized screen pos
+memscreenscaled: 0x0		; memorized scaled screen pos
+memscreenoffset: 0x0		; memorized screen offset
+memscreenscaleoffset: 0x0 	; memorized screen scale offset
+memgridpos: 0x0				; grid-locked selection screen pos
+
+dragoffset: 0x0
+memdragoffset: 0x0
+
+gridsize: 400x400
+
+trackstart: [ [0x0 10x50] [10x0 20x80] [20x0 30x75] [30x0 40x10] [40x0 50x118] [50x0 60x93] ]
+tracklok: [ [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] ]
+
 grdofs: 0x0
 coo: 400x400
 corg: 0x0
@@ -14,39 +29,51 @@ lokofs: 0x0
 tlokofs: 0x0
 mmid: false
 mmdown: 0x0
+mmofs: 0x0
 circp: 100x100
 tcircp: 100x100
+sw: now/time/precise
+ew: now/time/precise
 
-offsetlock: function [ p o s ] [
+screenscaleandoffset: function [ p o s ] [
+	print [ "screenscaleandoffset [ p o s ] : " p o s ]
+	t: 0x0
+    fx: to-integer (p/x * s/1)
+    fy: to-integer (p/y * s/2)
+	print [ "fx fy : " fx fy ]
+    t/x: fx - p/x
+    t/y: fy - p/y
+	print [ "fx - t : " t ]
+	t/x: t/x - o/x
+	t/y: t/y - o/y
+	print [ "t - o : " t ]
+	t
+]
+
+scaleandoffset: function [ p o s ] [
     p/x: to-integer (p/x * s/1)
     p/y: to-integer (p/y * s/2)
-    p/x: p/x - (to-integer (o/x))
-    p/y: p/y - (to-integer (o/y))
+    p/x: p/x - o/x
+    p/y: p/y - o/y
 	p
 ]
 
 drawgrid: func [ p k ] [
-	print [ "drawgrid lokofs = " k ]
 	gwdth: 25
 	gspcx: gwdth * scl/1
-	gnumx: (to-integer (coo/x / gspcx))
-	print [ "x gridlines: " gnumx ]
+	gnumx: (to-integer (gridsize/x / gspcx))
 	gspcy: 25.0 * scl/2
-	gnumy: (to-integer (coo/y / gspcy))
-	print [ "y gridlines: " gnumy ]
+	gnumy: (to-integer (gridsize/y / gspcy))
 	gf: make font! [size: 8 name: "Consolas" color: 180.180.180 ]
 	append p/draw compose [ font (gf) ]
-	print [ "50x50 in grid space is: " (to-pair reduce [ (to-integer (2 * gspcx)) (to-integer (2 * gspcy)) ]) ]
-	print [ "offset of 50x50 is: " (offsetlock to-pair reduce [ (to-integer (2 * gspcx)) (to-integer (2 * gspcy)) ] k scl) ]
 	repeat i (max gnumx gnumy) [
-		ix: offsetlock to-pair reduce [ (to-integer (i * gwdth)) (to-integer (i * gwdth)) ] k scl
-		;ix: to-pair reduce [ (to-integer (i * gspcx)) (to-integer (i * gspcy)) ]
+		ix: scaleandoffset to-pair reduce [ (to-integer (i * gwdth)) (to-integer (i * gwdth)) ] k scl
 		gtx: to-pair reduce [ ix/x 5 ]
 		gty: to-pair reduce [ 5 ix/y ]
 		glxa: to-pair reduce [ ix/x 0 ]
-		glxb: to-pair reduce [ ix/x coo/y ]
+		glxb: to-pair reduce [ ix/x gridsize/y ]
 		glya: to-pair reduce [ 0 ix/y ]
-		glyb: to-pair reduce [ coo/x ix/y ]
+		glyb: to-pair reduce [ gridsize/x ix/y ]
 		either (i % 2) = 0 [
 			append p/draw compose [ 
 				pen 50.50.50 
@@ -65,41 +92,35 @@ drawgrid: func [ p k ] [
 	]	
 ]
 
-drawdbg: func [ p ] [
+drawdbg: func [ p xf gp ] [
 	tfx: 5
-	if ((coo/x - scrpos/x) < 150) [ tfx: -155 ]
+	if ((coo/x - xf/x) < 150) [ tfx: -155 ]
 	tc: to-pair reduce [ (tfx) 5 ]
 	tf: make font! [size: 10 name: "Consolas" style: 'bold]
 	append p/draw compose [ font (tf) ]
 	append p/draw compose [ 
 		pen 80.80.255  
-		line (to-pair reduce [ scrpos/x 0 ]) (to-pair reduce [ scrpos/x coo/y]) line (to-pair reduce [ 0 scrpos/y ]) (to-pair reduce [ coo/x scrpos/y]) 
-		text (scrpos + tc) (rejoin reduce [ "screen mark : " (scrpos/x) "x" (scrpos/y) ])
+		line (to-pair reduce [ xf/x 0 ]) (to-pair reduce [ xf/x gridsize/y]) line (to-pair reduce [ 0 xf/y ]) (to-pair reduce [ gridsize/x xf/y]) 
+		text (xf + tc) (rejoin reduce [ "screen mark : " (xf/x) "x" (xf/y) ])
 	]
 
 	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
 	append p/draw compose [ font (tf) ]
 	append p/draw compose [ 
 		pen 0.255.0 
-		text (scrpos + tc + 0x15) (rejoin reduce [ "screen offset before trans: " (grdofs/x - scrpos/x) "," (grdofs/y - scrpos/y) ])
+		text (xf + tc + 0x15) (rejoin reduce [ "screen offset: " (memscreenoffset/x - xf/x) "," (memscreenoffset/y - xf/y) ])
 	]
 
-	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.80.255 anti-alias? true]
-	append p/draw compose [ font (tf) ]
-	append p/draw compose [ 
-		text (scrpos + tc + 0x30) (rejoin reduce [ "scaled mark : " (grdofs/x) "x" (grdofs/y) ])
-	]
-
-	ofgl: offsetlock scrpos lokofs scl
-	if ((coo/x - ofgl/x) < 150) [ tfx: -155 ]
+	if ((gridsize/x - gp/x) < 150) [ tfx: -155 ]
 	tc: to-pair reduce [ (tfx) 5 ]
-	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.255.80 anti-alias? true]
+	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.80.80 anti-alias? true]
 	append p/draw compose [ font (tf) ]
 	append p/draw compose [ 
-		pen 255.255.0 
-		line (to-pair reduce [ ofgl/x 0 ]) (to-pair reduce [ ofgl/x coo/y ])
-		line (to-pair reduce [ 0 ofgl/y ]) (to-pair reduce [ coo/x ofgl/y ])
-		text (ofgl + tc + 0x45) (rejoin reduce [ "grid lock : " (grdpos/x) "x" (grdpos/y) ])
+		pen 255.0.0 
+		line-width 3
+		line (to-pair reduce [ gp/x 0 ]) (to-pair reduce [ gp/x gridsize/y ])
+		line (to-pair reduce [ 0 gp/y ]) (to-pair reduce [ gridsize/x gp/y ])
+		text (gp + tc) (rejoin reduce [ "grid lock : " (xf/x) "x" (xf/y) ])
 	]
 ]
 
@@ -116,6 +137,11 @@ view/tight [
 		below
 		p: panel 400x400 30.30.80 draw [ ] [
 			gg1: panel 400x400 30.30.30 all-over draw [ ] on-wheel [
+
+				print [ "screen offset before zoom: " memscreenoffset ]
+
+;; scale
+
 				either event/picked > 0 [
 				    scl/1: min (scl/1 + 0.1) 10.0
 					scl/2: min (scl/2 + 0.1) 10.0
@@ -123,69 +149,82 @@ view/tight [
 					scl/1: max (scl/1 - 0.1) 1.0 
 					scl/2: max (scl/2 - 0.1) 1.0 
 				]
-				
-			    coo/x: to-integer ( 400.0 * scl/1)
-				coo/y: to-integer (400.0 * scl/2)
-				print [ "scaled grid size: " coo ]
 
-				scrofs: 0x0
-				scrofs/x: to-integer (scrpos/x * scl/1)
-				scrofs/y: to-integer (scrpos/y * scl/2)
-				print [ "screen pos offset: " scrofs ]
+;; scale the drag offset
 
-				grdofs/x: to-integer (grdpos/x * scl/1)
-				grdofs/y: to-integer (grdpos/y * scl/2)
-				print [ "grid pos offset: " grdofs ]
+				;dragoffset: memdragoffset * to-pair reduce [ (scl/1) (scl/2) ]
 
-				lokofs: to-pair reduce [ (grdofs/x - scrpos/x) (grdofs/y - scrpos/y) ]
-				trkpos: offsetlock 100x100 lokofs scl
-				coo: offsetlock coo lokofs scl
+			    screenoffset: screenscaleandoffset memscreenpos memdragoffset scl
+
+				memgridpos: scaleandoffset memscreenpos screenoffset scl
+
+			    repeat t (length? trackstart) [
+				    tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
+				    tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
+				]
 
 				clear face/draw
 
-				append face/draw compose [ pen 255.50.50 circle (trkpos) (10 * scl/1) (10 * scl/2) ]
+				foreach t tracklok [
+					append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+				]
+				append face/draw compose [ fill-pen off ]
 
-			    drawgrid face lokofs
-
-				drawdbg face
-
+			    drawgrid face screenoffset
+				drawdbg face memscreenpos memgridpos
 				drawzoom face
 
+				memscreenoffset: screenoffset
+				memscreenscaled: screenscaled
+			    print [ "screen offset after zoom: " memscreenoffset ]
+
 			] on-down [
-				scrpos: to-pair reduce [ (to-integer (1.0 * event/offset/x)) (to-integer (1.0 * event/offset/y)) ]
-				scrpos/x: (scrpos/x + lokofs/x)
-				scrpos/y: (scrpos/y + lokofs/y)
-				grdpos: to-pair reduce [ (to-integer (scrpos/x / scl/1)) (to-integer (scrpos/y / scl/2)) ]
-				scrpos: to-pair reduce [ (to-integer (1.0 * event/offset/x)) (to-integer (1.0 * event/offset/y)) ]
-				mco: coo
-				print [ "on-down event happened" ]
-				append face/draw compose [ pen 0.0.255 line (to-pair reduce [ scrpos/x 0 ]) (to-pair reduce [ scrpos/x coo/y]) line (to-pair reduce [ 0 scrpos/y ]) (to-pair reduce [ coo/x scrpos/y]) ]
+				memscreenpos: to-pair reduce [ (round/to event/offset/x 25) (round/to event/offset/y 25 ) ]
+				screenoffset: screenscaleandoffset memscreenpos memdragoffset scl
+				repeat t (length? trackstart) [
+					tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
+					tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
+				]
+				gridpos: scaleandoffset memscreenpos screenoffset scl
+				clear face/draw
+				foreach t tracklok [
+					append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+				]
+				append face/draw compose [ fill-pen off ]
+				drawgrid face screenoffset
+				drawdbg face memscreenpos gridpos
+				print [ "on-down event happened at: " memscreenpos ]
+				append face/draw compose [ pen 255.0.0 line-width 3 line (to-pair reduce [ memscreenpos/x 0 ]) (to-pair reduce [ memscreenpos/x gridsize/x]) line (to-pair reduce [ 0 memscreenpos/y ]) (to-pair reduce [ gridsize/x memscreenpos/y]) ]
+				
 			] on-mid-down [ 
 				mmid: true
 				mmdown: event/offset
-				scrpos: to-pair reduce [ (to-integer (1.0 * event/offset/x)) (to-integer (1.0 * event/offset/y)) ]
-				scrpos/x: (scrpos/x + lokofs/x)
-				scrpos/y: (scrpos/y + lokofs/y)
-				grdpos: to-pair reduce [ (to-integer (scrpos/x / scl/1)) (to-integer (scrpos/y / scl/2)) ]
-				scrpos: to-pair reduce [ (to-integer (1.0 * event/offset/x)) (to-integer (1.0 * event/offset/y)) ]
-				mco: coo
+				print [ "screen offset before drag..........: " memscreenoffset ]
 			] on-over [
 				if mmid [
 					mmofs: event/offset - mmdown
-					print [ "middle mouse offset: " mmofs ]
-					tlokofs: lokofs - mmofs
-					ttrkpos: offsetlock 100x100 tlokofs scl
-
+					mmofs: memdragoffset + mmofs
+				    screenoffset: screenscaleandoffset memscreenpos mmofs scl
+			    	repeat t (length? trackstart) [
+				    	tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
+				    	tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
+					]
+					gridpos: scaleandoffset memscreenpos screenoffset scl
 					clear face/draw
-					append face/draw compose [ pen 255.50.50 circle (ttrkpos) (10 * scl/1) (10 * scl/2) ]
-			    	drawgrid face tlokofs
-					;drawdbg face
-					drawzoom face				    
+					foreach t tracklok [
+						append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+					]
+					append face/draw compose [ fill-pen off ]
+					append face/draw compose [ pen 0.255.0 line (event/offset) (mmdown) ]
+			    	drawgrid face dragoffset
+					drawdbg face memscreenpos gridpos
 				]
 			] on-mid-up [
 				mmid: false
-				circp: tcircp
-				lokofs: tlokofs
+				memdragoffset: mmofs
+				;memscreenoffset: 
+				;memscreenscaleoffset: dragoffset
+				print [ "screen offset after drag...........: " mmofs ]
 			]
 		] 
 	]
