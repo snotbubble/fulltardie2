@@ -8,24 +8,63 @@ Red [needs: 'view]
 
 ;; ! : doing it
 ;; ? : having problems with it
-;; - : dropped it
+;; - : probably dropping it
+;; X : testing it
 ;;
-;; TODO: [!] handle simple day-counting in findnextdate
-;; TODO: [!] fix every-nth every-day logic
-;; TODO: [!] fix from-day
-;; TODO: [ ] rule list header ui
-;; TODO: [ ] add blank line to bottom of rule list & hadle it
-;; TODO: [ ] rewrite graph ui
+;;
+;; TODO: [!] add simple day-counting in findnextdate
+;; TODO: [!] fix every-nth every-day confusion
+;; TODO: [X] fix from-day for weekends
+;; TODO: [!] fix from-day for weekdays
+;; TODO: [!] fix from-day ui list selection offset
+;; TODO: [?] add operable duplicate ui, eg: 2 parameter panes
+;; TODO: [ ] add pin parameter toggle to pane title bar
+;; TODO: [ ] add isolate forecast toggle on rule double-click
+;; TODO: [ ] add list headers
+;; TODO: [ ] add list footers
+;; TODO: [-] add group and category setup pane (colors, stats), maybe combine with category graph
+;; TODO: [?] add rewritten graph ui with pan/zoom & colors
+;; TODO: [ ] add graph group and category filters
+;; TODO: [ ] add saving/loading scenarios, scenario switcher
+;;---------------------------------------------------------------------------
+;; TODO: [ ] fix tab-height issue as it will break the whole ui on other computers
+;; TODO: [ ] stress-test, add safeteys
+;; TODO: [ ] procure a throwaway windows notebook
+;; TODO: [ ] windows test, clean up ui as required
+;; TODO: [ ] dist upgrade, get latest popular wm
+;; TODO: [ ] linux wm tests, clean up ui as required 
+;;---------------------------------------------------------------------------
+;; TODO: [ ] graph selection of items activates rule params/list if present
+;; TODO: [ ] forecast list selection activates rule params/list if present
+;; TODO: [ ] reminder pane to hold 'pinned' forecasted transactions
+;; TODO: [ ] push pinned forecasts to gnome/plasma/xfce calednar/events
+;; TODO: [ ] category graph (nested disc)
+;;---------------------------------------------------------------------------
+;; TODO: [ ] re-write ui to allow custom splitting, save/load layouts
+;; TODO: [ ] gut the ui for use on new projects
+;;---------------------------------------------------------------------------
+;; TODO: [ ] report builder
+;; TODO: [ ] pdf output
+;;---------------------------------------------------------------------------
+;; TODO: [-] calendar pane, kinda redundant, do it for the excercise
+;;---------------------------------------------------------------------------
 
 ;; magic numbers
 tabheight: 38	;; with consolas 12 bold in it
-
 
 ;; rule selection index, used everywhere:
 rsidx: 1
 
 ;; tell ui events to settle down
 noupdate: true
+
+;; list of graph panes
+graphs: copy [ 0 0 0 ]
+
+;;graph mousedown coords
+gdown1: 0x0
+gdown2: 0x0
+gdown3: 0x0
 
 lymd: function [ cy tabi tabf ] [
 ;; this gets pounded by the forecast, disabled print until its optimized
@@ -173,7 +212,7 @@ findnextdate: function [ dt tabi tabf ] [
 				md: pick t a/month
 
 				if (wkd = 0) or (wkd > 7) [ 
-					mth: max (min nth md) ffd	
+					mth: (min nth md)	
 					if mth = 0 [ 
 						;print[ tabi "^-findnextdate found zero nth in " dt ]
 						mth: now/day 
@@ -195,7 +234,11 @@ findnextdate: function [ dt tabi tabf ] [
 							c: c + 1
 							rem: (md - d)
 							if (c >= ofs) or (rem < 8) [
-								chk: (c % (min nth wdc))
+								either ffd = 0 [
+									chk: (c %  (min nth wdc))
+								] [
+									chk: ((min (c + 1) (wdc + 1)) %  (min nth wdc))
+								]
 								cwi: 0
 							]
 						]
@@ -383,12 +426,13 @@ rendraw: renderraw copy/deep td "^-" "initial_forecast"
 yearbracket: getyearbracket
 amsetting: true
 
-graphit: function [ d tabi tabf ] [
+graphit: function [ d gidx tabi tabf ] [
 	print [ tabi "graphit function triggered by " tabf "..." ]
-	clear canvas/draw
+	ggx: do to-path ( reduce rejoin [ 'gg (gidx) ] )
+	clear ggx/draw
 	t: 1
-	cx: canvas/size/x
-	cy: canvas/size/y
+	cx: ggx/size/x
+	cy: ggx/size/y
 	seg: cx  / 12
 	mu: [1 "jan" 2 "feb" 3 "mar" 4 "apr" 5 "may" 6 "jun" 7 "jul" 8 "aug" 9 "sep" 10 "oct" 11 "nov" 12 "dec"]
 	lyt: lymd now/year rejoin [ tabi "^-" ] "graphit"
@@ -400,9 +444,9 @@ graphit: function [ d tabi tabf ] [
 	mfac: (nd / mmd)
 	oseg: (to-integer (seg * mfac))
 	dayw: to-integer (cx / 365.0)
-	append canvas/draw compose [pen 200.200.200]
+	append ggx/draw compose [pen 200.200.200]
 	marks: make font! [size: 8 name: "Consolas" style: 'bold]
-	append canvas/draw compose [font (marks)]
+	append ggx/draw compose [font (marks)]
 	loop 13 [
 		ft: t - 1
 		topleft: 1x0
@@ -410,7 +454,7 @@ graphit: function [ d tabi tabf ] [
 		topleft/x: to-integer ((ft * seg) - oseg)
 		bottomright/x: to-integer ((ft * seg) - oseg)
 		bottomright/y: cy
-		append canvas/draw compose [line (topleft) (bottomright)]
+		append ggx/draw compose [line (topleft) (bottomright)]
 		ttp: 1x0
 		xo: to-integer (((ft * seg) - oseg) + 5)
 		ttp/x: xo
@@ -418,10 +462,10 @@ graphit: function [ d tabi tabf ] [
 		n: now/month
 		n: (((n + (t - 1)) - 1) % 12) + 1
 		mo: select mu n
-		append canvas/draw compose [text (ttp) (mo)]
+		append ggx/draw compose [text (ttp) (mo)]
 		t: t + 1
 	]
-	append canvas/draw compose [pen 80.80.80]
+	append ggx/draw compose [pen 80.80.80]
     bct: 1
 	mxv: 0.0
 	foreach k d [
@@ -430,8 +474,8 @@ graphit: function [ d tabi tabf ] [
 	]
 	print[ tabi "^-graphit: max magnitude = " mxv ]
 	foreach i d [
-		cw: canvas/size/x
-		ch: ch: canvas/size/y
+		cw: ggx/size/x
+	    ch: ggx/size/y
 		tval: i/5
 		tdat: i/1
 		trv: tdat - now/date
@@ -453,7 +497,7 @@ graphit: function [ d tabi tabf ] [
 		topleft/y: reduce ch
 		bottomright/x: reduce (trv + dayw)
 		bottomright/y: reduce tdv
-		append canvas/draw compose [box (topleft) (bottomright)]
+		append ggx/draw compose [box (topleft) (bottomright)]
 		bct: bct + 1
 	]
 	print [ tabi "graphit function is done." ]
@@ -468,6 +512,11 @@ changeparam: func [ i s tabi tabf ] [
 	rlist/selected: rsidx
 	nxt: findnextdate td/:rsidx tabi "rlist_change_event"
 	tqq/text: to-string nxt/1/1
+	gf: getforecast copy/deep td "^-" "initial_forecast"
+	rendforecast: renderforecast copy/deep gf "^-" "initial_forecast"
+	clear folist/data
+	folist/data: rendforecast
+	graphit (copy/deep gf) 1 "^-" "aa-pane-list event"
 	print [ tabi "changeparam func is done." ] 
 ]
 
@@ -585,6 +634,64 @@ prule: compose/deep [
 	   	nudgev
 		noupdate: false
 	]
+]
+
+;; graph pane
+makepgraph: function [ i ] [
+	o: compose/deep [
+		below
+	    ( to-set-word rejoin [ 'ggh (i) ] ) panel 800x55 40.40.40 [
+			text 170x30 "graph toolbar"
+		]
+	    ( to-set-word rejoin [ 'ggp (i) ] ) panel 800x745 40.40.40 [
+		    ( to-set-word rejoin [ 'gg (i) ] ) panel 800x745 30.30.30 loose draw [ ] on-down [
+				;;( to-set-word rejoin [ 'gdown (i) ] ) event/offset 
+			    ( to-set-word 'perc ) face/parent/size/x / face/size/x
+			    ( to-set-word 'perc ) event/offset/x * perc
+				( to-set-word 'gpct ) 0x0
+			    ( to-set-path [ gpct x ] ) to-integer perc
+			    ( to-set-path [ gpct y ] ) event/offset/y
+				( to-set-word rejoin [ 'gdown (i) ] ) gpct
+				( to-set-word 'marks ) 0x0
+				( to-set-word 'marke ) 0x0
+			    ( to-set-path [ marks x ] ) event/offset/x
+			    ( to-set-path [ marks y ] ) 0
+			    ( to-set-path [ marke x ] ) event/offset/x
+			    ( to-set-path [ marke y ] ) face/size/y
+				append face/draw compose [ pen 255.0.0 line (quote (marks)) (quote (marke)) ]
+			] on-wheel [
+			    ( to-set-word 'xspec ) face/size/y / face/size/x
+				( to-set-word 'fpx ) face/size/x + 100
+				( to-set-word 'fmx ) face/size/x - 100
+				either event/picked > 0 [
+				    ( to-set-word 'fsx ) min fpx 4000
+				] [
+				    ( to-set-word 'fsx ) max fmx (to-path reduce [ ( to-word rejoin [ 'ggp (i) ] ) 'size 'x ])
+				]
+				print [ "pane width = " (to-path reduce [ ( to-word rejoin [ 'ggp (i) ] ) 'size 'x ]) ]
+				print [ "graph width = " fsx ]
+				( to-set-word 'xdif ) fsx - (to-path reduce [ ( to-word rejoin [ 'ggp (i) ] ) 'size 'x ])
+				print [ "overflow = " xdif ]
+				( to-set-word 'hdif ) xdif * 0.5
+				print [ "overflow * 0.5 = " hdif ]
+				( to-set-word 'moff )  (to-path reduce [ ( to-word rejoin [ 'ggp (i) ] ) 'size 'x ]) * 0.5
+				print [ "pane midpoint = " moff ]
+				( to-set-word 'moff ) gdown1/x - moff
+				print [ "marker pos - pane midpoint = " moff ]
+				( to-set-word 'moff )  moff / (to-path reduce [ ( to-word rejoin [ 'ggp (i) ] ) 'size 'x ])
+				print [ "offset percentage: " moff ]
+				( to-set-word 'moff ) moff * fsx
+				print [ "offset as percentage of graph width: " moff ]
+				( to-set-word 'hdif ) hdif + moff
+			    print [ "overflow * 0.5 + mouse-diff = " hdif ]
+				face/offset/x: to-integer 0 - hdif
+				face/size/x: fsx
+				graphit copy/deep gf (i) "^-" "graph-pane on-wheel event"
+			]
+		]
+	]
+	probe o
+	o
 ]
 
 layoutpanefaces: function [ cx ox oy pp ] [
@@ -751,6 +858,12 @@ nudgev: function [ ] [
 	ccp/size/x: cc/size/x
 	attempt [ rlist/size/x: rlist/parent/size/x - 20 ]
 	attempt [ folist/size/x: folist/parent/size/x - 20 ]
+    unless graphs/1 = 0 [
+		ggh1/offset/x: 0 ggh1/size/x: ggh1/parent/size/x
+		ggp1/offset/x: 0 ggp1/size/x: ggh1/size/x 
+		gg1/size/x: max gg1/size/x ggp1/size/x gg1/offset/x: min 0 (gg1/size/x - ggp1/size/x) ]
+    unless graphs/2 = 0 [  ggp2/offset/x: 0 ggh2/offset/x: 0 ggp2/size/x: ggp2/parent/size/x ggh2/size/x: ggh2/parent/size/x ]
+    unless graphs/3 = 0 [  ggp3/offset/x: 0 ggh3/offset/x: 0 ggp3/size/x: ggp3/parent/size/x ggh3/size/x: ggh3/parent/size/x ]
 	squish: false
 	attempt [ none? ppane squish: true ]
 	if squish [
@@ -793,6 +906,9 @@ nudgeh: function [ ] [
 	ccp/size/y: cc/size/y - cch/size/y
 	attempt [ rlist/size/y: rlist/parent/size/y - 20 ]
 	attempt [ folist/size/y: folist/parent/size/y - 20 ]
+    unless graphs/1 = 0 [  ggp1/offset/y: ggh1/size/y ggh1/offset/y: 0 ggp1/size/y: (ggp1/parent/size/y - ggh1/size/y) gg1/size/y: ggp1/size/y gg1/offset/y: 0 ]
+    unless graphs/2 = 0 [  ggp2/offset/y: 0 ggh2/offset/y: 0 ggp2/size/y: ggp2/parent/size/y ggh2/size/y: ggh2/parent/size/y ]
+    unless graphs/3 = 0 [  ggp3/offset/y: 0 ggh3/offset/y: 0 ggp3/size/y: ggp3/parent/size/y ggh3/size/y: ggh3/parent/size/y ]
 	hh/draw: compose/deep [
 		pen off
 		fill-pen 100.100.100
@@ -817,21 +933,34 @@ view/tight/flags/options [
 						switch face/selected [
 							1 [ 
 								noupdate: true 
+								graphs/1: 0
 								aap/pane: layout/only prule 
 								nudgev nudgeh
 								noupdate: false
 							]
 							2 [ 
-								noupdate: true 
+								noupdate: true
+								graphs/1: 0
 								aap/pane: layout/only pparm
 							    nudgev nudgeh
 								noupdate: false	
 							]
 							3 [ 
-								noupdate: true 
+								noupdate: true
+								graphs/1: 0
 								aap/pane: layout/only pforecast
 							    nudgev nudgeh
 								noupdate: false	
+							]
+							4 [ 
+								noupdate: true
+								graphs/1: 1
+								aap/pane: layout/only copy/deep makepgraph 1
+							    nudgev nudgeh
+								gg1/size/x: ggp1/size/x gg1/size/y: ggp1/size/y
+								gg1/offset: 0x0
+								graphit (copy/deep gf) 1 "^-" "aa-pane-list event"
+								noupdate: false
 							]
 						]
 					]
