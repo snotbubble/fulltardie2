@@ -8,6 +8,8 @@
 - [X] brain-surgery: swap out the data structure
 - [X] automatic plain-English translation of the recurrence rules
 - [X] set rule elements by clicking on parts of the English translation
+- [ ] add day-counting
+- [ ] add day offset
 - [X] 3-pane ui
 - [X] resize panes with dividers
 - [ ] assign views to panes, allowing for duplication, eg: two graphs.
@@ -18,6 +20,7 @@
 rule list view
 - [ ] rule list header
 - [ ] rule list lower space (last-entry fights with the horizontal scrollabr)
+- [ ] double-click to toggle isolated forecast
 
 selected-rule parameters view
 - [X] auto re-arrange wigets to fit panel
