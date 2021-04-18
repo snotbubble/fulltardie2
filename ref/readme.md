@@ -5,4 +5,4 @@ prefixed with the author's name if I didn't write it
 
 - pan and zoom tests
 
-![panandzoom](210328b_panandzoom.png)
+![panandzoom](210419_panandzoom.png)
