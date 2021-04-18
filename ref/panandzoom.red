@@ -22,6 +22,8 @@ pp: 0x0
 pzp: 0x0
 zo: 0x0
 
+ogp: copy []
+
 dragoffset: 0x0
 memdragoffset: 0x0
 
@@ -56,126 +58,90 @@ ew: now/time/precise
 
 zoomit: function [ p m s ] [
 	o: 0x0
-	print [ "old pos = " p ]
-	print [ "marker == " m ]
-   	print [ "scale === " s ]
+	;print [ "old pos = " p ]
+	;print [ "marker == " m ]
+   	;print [ "scale === " s ]
 	o/x: to-integer (((p/x - m/x) * s/1) + m/x)
 	o/y: to-integer (((p/y - m/y) * s/2) + m/y)
 	o
 ]
 
-scaleup: function [ p m s ] [
-	o: 0x0
-	o/x: to-integer ((p/x * s/1) - m/x)
-	o/y: to-integer ((p/y * s/2) - m/y)
-	o
-]
-
-screenscaleandoffset: function [ p o s ] [
-	print [ "screenscaleandoffset [ p o s ] : " p o s ]
-	t: 0x0
-    fx: to-integer (p/x * s/1)
-    fy: to-integer (p/y * s/2)
-	print [ "fx fy : " fx fy ]
-    t/x: fx - p/x
-    t/y: fy - p/y
-	print [ "fx - t : " t ]
-	t/x: t/x - o/x
-	t/y: t/y - o/y
-	print [ "t - o : " t ]
-	t
-]
-
-scaleandoffset: function [ p o s ] [
-    p/x: to-integer (p/x * s/1)
-    p/y: to-integer (p/y * s/2)
-    p/x: p/x - o/x
-    p/y: p/y - o/y
-	p
-]
-
-drawgrid: func [ p k ] [
-	gwdth: 25
-	gspcx: gwdth * scl/1
-	gnumx: (to-integer (gridsize/x / gspcx))
-	gspcy: 25.0 * scl/2
-	gnumy: (to-integer (gridsize/y / gspcy))
-	gf: make font! [size: 8 name: "Consolas" color: 180.180.180 ]
-	append p/draw compose [ font (gf) ]
-	repeat i (max gnumx gnumy) [
-		ix: scaleandoffset to-pair reduce [ (to-integer (i * gwdth)) (to-integer (i * gwdth)) ] k scl
-		gtx: to-pair reduce [ ix/x 5 ]
-		gty: to-pair reduce [ 5 ix/y ]
-		glxa: to-pair reduce [ ix/x 0 ]
-		glxb: to-pair reduce [ ix/x gridsize/y ]
-		glya: to-pair reduce [ 0 ix/y ]
-		glyb: to-pair reduce [ gridsize/x ix/y ]
-		either (i % 2) = 0 [
-			append p/draw compose [ 
-				pen 50.50.50 
-				line (glxa) (glxb) 
-				line (glya) (glyb)
-				text (gtx) (rejoin reduce [ (to-integer (gwdth * i)) ])
-				text (gty) (rejoin reduce [ (to-integer (gwdth * i)) ])
-			]
-		] [
-			append p/draw compose/deep [ 
-				pen 40.40.40 
-				line (glxa) (glxb) 
-				line (glya) (glyb)
-			]
-		]
-	]	
-]
-
-drawdbg: func [ p sp pp zp pzp dp dz dpz ] [
-	tf: make font! [size: 10 name: "Consolas" style: 'bold]
-	append p/draw compose [ font (tf) ]
-	append p/draw compose [ 
-		pen 80.80.255  
-		line (to-pair reduce [ sp/x 0 ]) (to-pair reduce [ sp/x gridsize/y]) line (to-pair reduce [ 0 sp/y ]) (to-pair reduce [ gridsize/x sp/y]) 
-		text (sp) (rejoin reduce [ "screen mark in screenspace : " (sp/x) "x" (sp/y) ])
+initgrid: func [ spc ] [
+	gx: 400 * (1.0 / gscl/1)
+	gp: to-integer (gx / spc)
+	gs: spc * gscl/1
+	repeat i gp [
+		gxa: (to-pair reduce [ (to-integer (spc * i)) 0 ])
+		gxb: (to-pair reduce [ (to-integer (spc * i)) 400 ])
+		gya: (to-pair reduce [ 0 (to-integer (spc * i)) ])
+		gyb: (to-pair reduce [ 400 (to-integer (spc * i)) ])
+		append/only ogp compose [ (gxa) (gxb) (gya) (gyb) ]
 	]
-	if dp [
-		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
+]
+
+zoomgrid: func [ p ] [
+	ngp: copy []
+    foreach g ogp [
+		gxa: zoomit g/1 msp scl
+		gxb: zoomit g/2 msp scl
+		gya: zoomit g/3 msp scl
+		gyb: zoomit g/4 msp scl
 		append p/draw compose [
-			pen 0.255.0
-			line-width 1
-			line (to-pair reduce [ pp/x 0 ]) (to-pair reduce [ pp/x gridsize/y ])
-			line (to-pair reduce [ 0 pp/y ]) (to-pair reduce [ gridsize/x pp/y ])
+		    pen 80.80.80
+	    	line (gxa) (gxb)
+	    	line (gya) (gyb)
 		]
-		append p/draw compose [ font (tf) ]
-		append p/draw compose [ 
-			pen 0.255.0 
-			text (pp) (rejoin reduce [ "screen mark after pan: " (pp/x) "," (pp/y) ])
+		append/only ngp compose [ (gxa) (gxb) (gya) (gyb) ]
+	]
+	clear ogp
+	foreach g ngp [ append/only ogp g ]	
+]
+
+pangrid: func [ p d ] [
+    foreach g ogp [
+		gxa: g/1 + d
+		gxb: g/2 + d
+		gya: g/3 + d
+		gyb: g/4 + d
+		append p/draw compose [
+		    pen 80.80.80
+	    	line (gxa) (gxb)
+	    	line (gya) (gyb)
 		]
 	]
+]
 
-	if dz [
-		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
-		append p/draw compose [
-			pen 255.255.0
-			line-width 1
-			line (to-pair reduce [ zp/x 0 ]) (to-pair reduce [ zp/x gridsize/y ])
-			line (to-pair reduce [ 0 zp/y ]) (to-pair reduce [ gridsize/x zp/y ])
-		]
-		append p/draw compose [ font (tf) ]
-		append p/draw compose [ 
-			pen 255.255.0 
-			text (zp) (rejoin reduce [ "screen mark after zoom: " (zp/x) "," (zp/y) ])
-		]
+endpangrid: func [ ] [
+	ngp: copy []
+    foreach g ogp [
+		append/only ngp compose [ (gxa) (gxb) (gya) (gyb) ]
 	]
+	clear ogp
+	foreach g ngp [ append/only ogp g ]	
+]
 
-	if dpz [
-		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.80.80 anti-alias? true]
-		append p/draw compose [ font (tf) ]
-		append p/draw compose [
-			pen 255.255.255
-			line-width 3
-			line (to-pair reduce [ pzp/x 0 ]) (to-pair reduce [ pzp/x gridsize/y ])
-			line (to-pair reduce [ 0 pzp/y ]) (to-pair reduce [ gridsize/x pzp/y ])
-			text (sp) (rejoin reduce [ "screen mark after pan and zoom : " (pzp/x) "x" (pzp/y) ])
-		]
+drawdemosquare: func [ p ] [
+	ff: make font! [size: 8 name: "Consolas" style: 'bold color: 220.50.50 anti-alias? true]
+	bf: make font! [size: 8 name: "Consolas" style: 'bold color: 150.20.20 anti-alias? true]
+	append p/draw compose [
+		pen 255.50.50 box (bi) (bx)
+		pen 150.20.20 box (oldbi) (oldbx)
+		line (to-pair reduce [ oldbi/x oldbi/y ]) (to-pair reduce [ bi/x bi/y ])
+		line (to-pair reduce [ oldbi/x oldbx/y ]) (to-pair reduce [ bi/x bx/y ])
+		line (to-pair reduce [ oldbx/x oldbi/y ]) (to-pair reduce [ bx/x bi/y ])
+		line (to-pair reduce [ oldbx/x oldbx/y ]) (to-pair reduce [ bx/x bx/y ])
+	]
+	append p/draw compose [
+		font (bf)
+		text (to-pair reduce [ (oldbi/x) (oldbi/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbi/y) ])
+		text (to-pair reduce [ (oldbi/x) (oldbx/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbx/y) ])
+		text (to-pair reduce [ (oldbx/x) (oldbi/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbi/y) ])
+		text (to-pair reduce [ (oldbx/x) (oldbx/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbx/y) ])
+		font (ff)
+		text (to-pair reduce [ (bi/x) (bi/y) ]) (rejoin reduce [ (bi/x) "x" (bi/y) ])
+		text (to-pair reduce [ (bi/x) (bx/y) ]) (rejoin reduce [ (bi/x) "x" (bx/y) ])
+		text (to-pair reduce [ (bx/x) (bi/y) ]) (rejoin reduce [ (bx/x) "x" (bi/y) ])
+		text (to-pair reduce [ (bx/x) (bx/y) ]) (rejoin reduce [ (bx/x) "x" (bx/y) ])
 	]
 ]
 
@@ -183,101 +149,73 @@ drawzoom: function [ p ] [
 	tf: make font! [size: 16 name: "Consolas" style: 'bold color: 80.80.80 anti-alias? true]
 	append p/draw compose [ font (tf) ]
 	append p/draw compose [
-		text (to-pair reduce [ (p/size/x - 220) (p/size/y - 40)  ]) (rejoin reduce [ "zoom: " (round/to scl/1 0.1) " x " (round/to scl/2 0.1) ])
+		text (to-pair reduce [ (p/size/x - 220) (p/size/y - 40)  ]) (rejoin reduce [ "zoom: " (round/to gscl/1 0.1) " x " (round/to gscl/2 0.1) ])
 	]
 ]
 
-drawvars: function [ p ] [
-	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.80.80 anti-alias? true]
-	append p/draw compose [ font (tf) ]
-	append p/draw compose [
-		text (to-pair reduce [ (30) (p/size/y - 70)  ]) (rejoin reduce [ "sp:" (sp) " msp: " (msp) " so: " (so) ])
-	]
-]
+initgrid 25
+probe ogp
 
 view/tight [
 	t: panel 400x400 [
 		below
 		p: panel 400x400 30.30.80 draw [ ] [
 			gg1: panel 400x400 30.30.30 all-over draw [ ] on-wheel [
-				sp: event/offset
-				scldw: false
+
+;; scale
+
 				scl/1: 1.0
 				scl/2: 1.0
 				either event/picked > 0 [
 				    scl/1: min (scl/1 + 0.1) 10.0
 					scl/2: min (scl/2 + 0.1) 10.0
+					gscl/1: gscl/1 + 0.1
+					gscl/2: gscl/2 + 0.1
 				] [
 					scl/1: max (scl/1 - 0.1) 0.1 
 					scl/2: max (scl/2 - 0.1) 0.1
-					scldw: true
+					gscl/1: gscl/1 - 0.1
+					gscl/2: gscl/2 - 0.1
 				]
-				gscl/1: gscl/1 + scl/1
-				gscl/2: gscl/2 + scl/2
 
-			    ;zo/x: to-integer ((sp/x - msp/x) * 0.5)
-			    ;zo/y: to-integer ((sp/y - msp/y) * 0.5)
+				clear face/draw
 
-			    ;zo/x: to-integer ((sp/x - msp/x) * 0.5) + mso/x
-			    ;zo/y: to-integer ((sp/y - msp/y) * 0.5) + mso/y
+;; sample grid goes here
 
-				;zo: mso
+			    zoomgrid face
 
-				;so/x: to-integer ((msp/x - zo/x) * scl/1) - msp/x
-				;so/y: to-integer ((msp/y - zo/y) * scl/2) - msp/y
+;; sample bar graph goes here
+				
 
-				;rsp: to-pair reduce [ (msp/x * (1.0 / scl/1)) (msp/y * (1.0 / scl/2)) ] 
-
-				;so/x: to-integer (msp/x * scl/1) - msp/x
-				;so/y: to-integer (msp/y * scl/2) - msp/y
-
-
-			    ;repeat t (length? trackstart) [
-				;    tracklok/:t/1: (trackstart/:t/1 * scl/1 ) - so/x
-				;    tracklok/:t/2: (trackstart/:t/2 * scl/2 ) - so/y
-				;]
+;;  demo square goes here
 
 				bi: zoomit oldbi msp scl 
 			    bx: zoomit oldbx msp scl 
-				clear face/draw
-				ff: make font! [size: 8 name: "Consolas" style: 'bold color: 220.50.50 anti-alias? true]
-				bf: make font! [size: 8 name: "Consolas" style: 'bold color: 150.20.20 anti-alias? true]
-				append face/draw compose [
-				    pen 255.50.50 box (bi) (bx)
-					pen 150.20.20 box (oldbi) (oldbx)
-					line (to-pair reduce [ oldbi/x oldbi/y ]) (to-pair reduce [ bi/x bi/y ])
-					line (to-pair reduce [ oldbi/x oldbx/y ]) (to-pair reduce [ bi/x bx/y ])
-					line (to-pair reduce [ oldbx/x oldbi/y ]) (to-pair reduce [ bx/x bi/y ])
-					line (to-pair reduce [ oldbx/x oldbx/y ]) (to-pair reduce [ bx/x bx/y ])
-				]
-				append face/draw compose [
-					font (bf)
-					text (to-pair reduce [ (oldbi/x) (oldbi/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbi/y) ])
-					text (to-pair reduce [ (oldbi/x) (oldbx/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbx/y) ])
-					text (to-pair reduce [ (oldbx/x) (oldbi/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbi/y) ])
-					text (to-pair reduce [ (oldbx/x) (oldbx/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbx/y) ])
-					font (ff)
-					text (to-pair reduce [ (bi/x) (bi/y) ]) (rejoin reduce [ (bi/x) "x" (bi/y) ])
-					text (to-pair reduce [ (bi/x) (bx/y) ]) (rejoin reduce [ (bi/x) "x" (bx/y) ])
-					text (to-pair reduce [ (bx/x) (bi/y) ]) (rejoin reduce [ (bx/x) "x" (bi/y) ])
-					text (to-pair reduce [ (bx/x) (bx/y) ]) (rejoin reduce [ (bx/x) "x" (bx/y) ])
-				]
+
+				drawdemosquare face
+
+;; mark pivot
+
 				append face/draw compose [
 					pen 0.0.255
 					line-width 1
 					line (to-pair reduce [ msp/x 0 ]) (to-pair reduce [ msp/x 400 ])
 					line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
 				]
-				;foreach t tracklok [
-				;	append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
-				;]
+
+;; other stats
 
 				drawzoom face
+
+;; remember positions
+
 			    oldbi: bi
 				oldbx: bx
 
 			] on-down [
-				;msp: event/offset
+
+;; mark pivot, snap to 10's
+
 				msp: to-pair reduce [ (round/to event/offset/x 10) (round/to event/offset/y 10) ]
 				append face/draw compose [
 					pen 0.0.255
@@ -286,53 +224,57 @@ view/tight [
 					line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
 				]
 			] on-mid-down [ 
+
+;; mark middle-mouse drag
+
 				mmid: true
 				mmdown: event/offset
 			] on-over [
 				if mmid [
+
+;; get drag offset
+
 				    dso: (event/offset - mmdown)
-					;dso/x: msp/x - (to-integer dso/x)
-					;dso/y: msp/y - (to-integer dso/y)
-					;bi: zoomit oldbi dso [ 1 1 ]
-					;bx: zoomit oldbx dso [ 1 1 ]
+					clear face/draw
+
+;; draw grid
+
+					pangrid face dso
+
+;; add drag offset to positions
+
 					bi: oldbi + dso
 					bx: oldbx + dso
-					clear face/draw
-					ff: make font! [size: 8 name: "Consolas" style: 'bold color: 220.50.50 anti-alias? true]
-					bf: make font! [size: 8 name: "Consolas" style: 'bold color: 150.20.20 anti-alias? true]
-					append face/draw compose [
-						pen 255.50.50 box (bi) (bx)
-						pen 150.20.20 box (oldbi) (oldbx)
-						line (to-pair reduce [ oldbi/x oldbi/y ]) (to-pair reduce [ bi/x bi/y ])
-						line (to-pair reduce [ oldbi/x oldbx/y ]) (to-pair reduce [ bi/x bx/y ])
-						line (to-pair reduce [ oldbx/x oldbi/y ]) (to-pair reduce [ bx/x bi/y ])
-						line (to-pair reduce [ oldbx/x oldbx/y ]) (to-pair reduce [ bx/x bx/y ])
-					]
-					append face/draw compose [
-						font (bf)
-						text (to-pair reduce [ (oldbi/x) (oldbi/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbi/y) ])
-						text (to-pair reduce [ (oldbi/x) (oldbx/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbx/y) ])
-						text (to-pair reduce [ (oldbx/x) (oldbi/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbi/y) ])
-						text (to-pair reduce [ (oldbx/x) (oldbx/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbx/y) ])
-						font (ff)
-						text (to-pair reduce [ (bi/x) (bi/y) ]) (rejoin reduce [ (bi/x) "x" (bi/y) ])
-						text (to-pair reduce [ (bi/x) (bx/y) ]) (rejoin reduce [ (bi/x) "x" (bx/y) ])
-						text (to-pair reduce [ (bx/x) (bi/y) ]) (rejoin reduce [ (bx/x) "x" (bi/y) ])
-						text (to-pair reduce [ (bx/x) (bx/y) ]) (rejoin reduce [ (bx/x) "x" (bx/y) ])
-					]
+
+;; update demo square (move this to func)
+
+				    drawdemosquare face
+
+;; mark pivot
+
 					append face/draw compose [
 						pen 0.0.255
 						line-width 1
 						line (to-pair reduce [ msp/x 0 ]) (to-pair reduce [ msp/x 400 ])
 						line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
 					]
+
+;; update other stats (move to func)
+
 					drawzoom face
 				]
 			] on-mid-up [
+
+;; stop dragging
+
 				mmid: false
-				mso: dso
+
+;; remember positions
+
+			    dso: 0
 			    oldbi: bi
 				oldbx: bx
+				endpangrid
 			]
 		] 
 	]
