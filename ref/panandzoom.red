@@ -1,31 +1,15 @@
 Red [ needs 'view ]
 
-;; mouse zooming experiment
-;; panels always scale from 0x0 regardless of where you put them, so doing it the hard way...
+;; TODO: [ ] fix cumulative grid rounding errors (store data as floats, use pairs for draw only)
+;; TODO: [ ] fix cumulative zoomit rounding errors
+;; TODO: [ ] set max bounds
+;; TODO: [ ] home key
+;; TODO: [ ] right-click drag for unbound x y scale
+;; TODO; [ ] zoom about mouse instead of pivot
 
-screenpos: 0x0				; selection pos in screen space
-screenscaled: 0x0			; scaled selection pos
-screenoffset: 0x0			; translated selection pos
-memscreenpos: 0x0			; memorized screen pos
-memscreenscaled: 0x0		; memorized scaled screen pos
-memscreenoffset: 0x0		; memorized screen offset
-memscreenscaleoffset: 0x0 	; memorized screen scale offset
-memgridpos: 0x0				; grid-locked selection screen pos
-
-sp: 0x0
 msp: 0x0
-so: 0x0
-dso: 0x0
-mso: 0x0
-zp: 0x0
-pp: 0x0
-pzp: 0x0
-zo: 0x0
 
 ogp: copy []
-
-dragoffset: 0x0
-memdragoffset: 0x0
 
 gridsize: 400x400
 
@@ -37,30 +21,22 @@ bx: 0x0
 oldbi: 100x100
 oldbx: 200x200
 
+dso: 0x0
+
+scl: [ 1.0 1.0 ]
 gscl: [ 1.0 1.0 ]
+
 boxmin: 100x100
 boxmax: 200x200
 
-grdofs: 0x0
-coo: 400x400
-corg: 0x0
-mco: 0x0
-scl: [ 1.0 1.0 ]
-lokofs: 0x0
-tlokofs: 0x0
 mmid: false
 mmdown: 0x0
-mmofs: 0x0
-circp: 100x100
-tcircp: 100x100
+
 sw: now/time/precise
 ew: now/time/precise
 
 zoomit: function [ p m s ] [
 	o: 0x0
-	;print [ "old pos = " p ]
-	;print [ "marker == " m ]
-   	;print [ "scale === " s ]
 	o/x: to-integer (((p/x - m/x) * s/1) + m/x)
 	o/y: to-integer (((p/y - m/y) * s/2) + m/y)
 	o
@@ -111,9 +87,13 @@ pangrid: func [ p d ] [
 	]
 ]
 
-endpangrid: func [ ] [
+endpangrid: func [ d ] [
 	ngp: copy []
     foreach g ogp [
+		gxa: g/1 + d
+		gxb: g/2 + d
+		gya: g/3 + d
+		gyb: g/4 + d
 		append/only ngp compose [ (gxa) (gxb) (gya) (gyb) ]
 	]
 	clear ogp
@@ -154,7 +134,6 @@ drawzoom: function [ p ] [
 ]
 
 initgrid 25
-probe ogp
 
 view/tight [
 	t: panel 400x400 [
@@ -167,15 +146,19 @@ view/tight [
 				scl/1: 1.0
 				scl/2: 1.0
 				either event/picked > 0 [
-				    scl/1: min (scl/1 + 0.1) 10.0
-					scl/2: min (scl/2 + 0.1) 10.0
-					gscl/1: gscl/1 + 0.1
-					gscl/2: gscl/2 + 0.1
+					if gscl/1 <= 10.0 [
+				    	scl/1: (scl/1 + 0.1)
+						scl/2: (scl/2 + 0.1)
+						gscl/1: gscl/1 + 0.1
+						gscl/2: gscl/2 + 0.1
+					]
 				] [
-					scl/1: max (scl/1 - 0.1) 0.1 
-					scl/2: max (scl/2 - 0.1) 0.1
-					gscl/1: gscl/1 - 0.1
-					gscl/2: gscl/2 - 0.1
+					if gscl/1 >= 0.1 [
+						scl/1: (scl/1 - 0.1)
+						scl/2: (scl/2 - 0.1)
+						gscl/1: gscl/1 - 0.1
+						gscl/2: gscl/2 - 0.1
+					]
 				]
 
 				clear face/draw
@@ -191,7 +174,6 @@ view/tight [
 
 				bi: zoomit oldbi msp scl 
 			    bx: zoomit oldbx msp scl 
-
 				drawdemosquare face
 
 ;; mark pivot
@@ -241,13 +223,10 @@ view/tight [
 
 					pangrid face dso
 
-;; add drag offset to positions
+;; update demo square
 
 					bi: oldbi + dso
 					bx: oldbx + dso
-
-;; update demo square (move this to func)
-
 				    drawdemosquare face
 
 ;; mark pivot
@@ -259,7 +238,7 @@ view/tight [
 						line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
 					]
 
-;; update other stats (move to func)
+;; update other stats
 
 					drawzoom face
 				]
@@ -271,10 +250,9 @@ view/tight [
 
 ;; remember positions
 
-			    dso: 0
 			    oldbi: bi
 				oldbx: bx
-				endpangrid
+				endpangrid dso
 			]
 		] 
 	]
