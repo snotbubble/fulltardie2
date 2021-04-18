@@ -12,6 +12,16 @@ memscreenoffset: 0x0		; memorized screen offset
 memscreenscaleoffset: 0x0 	; memorized screen scale offset
 memgridpos: 0x0				; grid-locked selection screen pos
 
+sp: 0x0
+msp: 0x0
+so: 0x0
+dso: 0x0
+mso: 0x0
+zp: 0x0
+pp: 0x0
+pzp: 0x0
+zo: 0x0
+
 dragoffset: 0x0
 memdragoffset: 0x0
 
@@ -19,6 +29,15 @@ gridsize: 400x400
 
 trackstart: [ [0x0 10x50] [10x0 20x80] [20x0 30x75] [30x0 40x10] [40x0 50x118] [50x0 60x93] ]
 tracklok: [ [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] [0x0 0x0] ]
+
+bi: 0x0
+bx: 0x0
+oldbi: 100x100
+oldbx: 200x200
+
+gscl: [ 1.0 1.0 ]
+boxmin: 100x100
+boxmax: 200x200
 
 grdofs: 0x0
 coo: 400x400
@@ -34,6 +53,23 @@ circp: 100x100
 tcircp: 100x100
 sw: now/time/precise
 ew: now/time/precise
+
+zoomit: function [ p m s ] [
+	o: 0x0
+	print [ "old pos = " p ]
+	print [ "marker == " m ]
+   	print [ "scale === " s ]
+	o/x: to-integer (((p/x - m/x) * s/1) + m/x)
+	o/y: to-integer (((p/y - m/y) * s/2) + m/y)
+	o
+]
+
+scaleup: function [ p m s ] [
+	o: 0x0
+	o/x: to-integer ((p/x * s/1) - m/x)
+	o/y: to-integer ((p/y * s/2) - m/y)
+	o
+]
 
 screenscaleandoffset: function [ p o s ] [
 	print [ "screenscaleandoffset [ p o s ] : " p o s ]
@@ -92,35 +128,54 @@ drawgrid: func [ p k ] [
 	]	
 ]
 
-drawdbg: func [ p xf gp ] [
-	tfx: 5
-	if ((coo/x - xf/x) < 150) [ tfx: -155 ]
-	tc: to-pair reduce [ (tfx) 5 ]
+drawdbg: func [ p sp pp zp pzp dp dz dpz ] [
 	tf: make font! [size: 10 name: "Consolas" style: 'bold]
 	append p/draw compose [ font (tf) ]
 	append p/draw compose [ 
 		pen 80.80.255  
-		line (to-pair reduce [ xf/x 0 ]) (to-pair reduce [ xf/x gridsize/y]) line (to-pair reduce [ 0 xf/y ]) (to-pair reduce [ gridsize/x xf/y]) 
-		text (xf + tc) (rejoin reduce [ "screen mark : " (xf/x) "x" (xf/y) ])
+		line (to-pair reduce [ sp/x 0 ]) (to-pair reduce [ sp/x gridsize/y]) line (to-pair reduce [ 0 sp/y ]) (to-pair reduce [ gridsize/x sp/y]) 
+		text (sp) (rejoin reduce [ "screen mark in screenspace : " (sp/x) "x" (sp/y) ])
+	]
+	if dp [
+		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
+		append p/draw compose [
+			pen 0.255.0
+			line-width 1
+			line (to-pair reduce [ pp/x 0 ]) (to-pair reduce [ pp/x gridsize/y ])
+			line (to-pair reduce [ 0 pp/y ]) (to-pair reduce [ gridsize/x pp/y ])
+		]
+		append p/draw compose [ font (tf) ]
+		append p/draw compose [ 
+			pen 0.255.0 
+			text (pp) (rejoin reduce [ "screen mark after pan: " (pp/x) "," (pp/y) ])
+		]
 	]
 
-	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
-	append p/draw compose [ font (tf) ]
-	append p/draw compose [ 
-		pen 0.255.0 
-		text (xf + tc + 0x15) (rejoin reduce [ "screen offset: " (memscreenoffset/x - xf/x) "," (memscreenoffset/y - xf/y) ])
+	if dz [
+		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.255.80 anti-alias? true]
+		append p/draw compose [
+			pen 255.255.0
+			line-width 1
+			line (to-pair reduce [ zp/x 0 ]) (to-pair reduce [ zp/x gridsize/y ])
+			line (to-pair reduce [ 0 zp/y ]) (to-pair reduce [ gridsize/x zp/y ])
+		]
+		append p/draw compose [ font (tf) ]
+		append p/draw compose [ 
+			pen 255.255.0 
+			text (zp) (rejoin reduce [ "screen mark after zoom: " (zp/x) "," (zp/y) ])
+		]
 	]
 
-	if ((gridsize/x - gp/x) < 150) [ tfx: -155 ]
-	tc: to-pair reduce [ (tfx) 5 ]
-	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.80.80 anti-alias? true]
-	append p/draw compose [ font (tf) ]
-	append p/draw compose [ 
-		pen 255.0.0 
-		line-width 3
-		line (to-pair reduce [ gp/x 0 ]) (to-pair reduce [ gp/x gridsize/y ])
-		line (to-pair reduce [ 0 gp/y ]) (to-pair reduce [ gridsize/x gp/y ])
-		text (gp + tc) (rejoin reduce [ "grid lock : " (xf/x) "x" (xf/y) ])
+	if dpz [
+		tf: make font! [size: 10 name: "Consolas" style: 'bold color: 255.80.80 anti-alias? true]
+		append p/draw compose [ font (tf) ]
+		append p/draw compose [
+			pen 255.255.255
+			line-width 3
+			line (to-pair reduce [ pzp/x 0 ]) (to-pair reduce [ pzp/x gridsize/y ])
+			line (to-pair reduce [ 0 pzp/y ]) (to-pair reduce [ gridsize/x pzp/y ])
+			text (sp) (rejoin reduce [ "screen mark after pan and zoom : " (pzp/x) "x" (pzp/y) ])
+		]
 	]
 ]
 
@@ -132,99 +187,152 @@ drawzoom: function [ p ] [
 	]
 ]
 
+drawvars: function [ p ] [
+	tf: make font! [size: 10 name: "Consolas" style: 'bold color: 80.80.80 anti-alias? true]
+	append p/draw compose [ font (tf) ]
+	append p/draw compose [
+		text (to-pair reduce [ (30) (p/size/y - 70)  ]) (rejoin reduce [ "sp:" (sp) " msp: " (msp) " so: " (so) ])
+	]
+]
+
 view/tight [
 	t: panel 400x400 [
 		below
 		p: panel 400x400 30.30.80 draw [ ] [
 			gg1: panel 400x400 30.30.30 all-over draw [ ] on-wheel [
-
-				print [ "screen offset before zoom: " memscreenoffset ]
-
-;; scale
-
+				sp: event/offset
+				scldw: false
+				scl/1: 1.0
+				scl/2: 1.0
 				either event/picked > 0 [
 				    scl/1: min (scl/1 + 0.1) 10.0
 					scl/2: min (scl/2 + 0.1) 10.0
 				] [
-					scl/1: max (scl/1 - 0.1) 1.0 
-					scl/2: max (scl/2 - 0.1) 1.0 
+					scl/1: max (scl/1 - 0.1) 0.1 
+					scl/2: max (scl/2 - 0.1) 0.1
+					scldw: true
 				]
+				gscl/1: gscl/1 + scl/1
+				gscl/2: gscl/2 + scl/2
 
-;; scale the drag offset
+			    ;zo/x: to-integer ((sp/x - msp/x) * 0.5)
+			    ;zo/y: to-integer ((sp/y - msp/y) * 0.5)
 
-				;dragoffset: memdragoffset * to-pair reduce [ (scl/1) (scl/2) ]
+			    ;zo/x: to-integer ((sp/x - msp/x) * 0.5) + mso/x
+			    ;zo/y: to-integer ((sp/y - msp/y) * 0.5) + mso/y
 
-			    screenoffset: screenscaleandoffset memscreenpos memdragoffset scl
+				;zo: mso
 
-				memgridpos: scaleandoffset memscreenpos screenoffset scl
+				;so/x: to-integer ((msp/x - zo/x) * scl/1) - msp/x
+				;so/y: to-integer ((msp/y - zo/y) * scl/2) - msp/y
 
-			    repeat t (length? trackstart) [
-				    tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
-				    tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
-				]
+				;rsp: to-pair reduce [ (msp/x * (1.0 / scl/1)) (msp/y * (1.0 / scl/2)) ] 
 
+				;so/x: to-integer (msp/x * scl/1) - msp/x
+				;so/y: to-integer (msp/y * scl/2) - msp/y
+
+
+			    ;repeat t (length? trackstart) [
+				;    tracklok/:t/1: (trackstart/:t/1 * scl/1 ) - so/x
+				;    tracklok/:t/2: (trackstart/:t/2 * scl/2 ) - so/y
+				;]
+
+				bi: zoomit oldbi msp scl 
+			    bx: zoomit oldbx msp scl 
 				clear face/draw
-
-				foreach t tracklok [
-					append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+				ff: make font! [size: 8 name: "Consolas" style: 'bold color: 220.50.50 anti-alias? true]
+				bf: make font! [size: 8 name: "Consolas" style: 'bold color: 150.20.20 anti-alias? true]
+				append face/draw compose [
+				    pen 255.50.50 box (bi) (bx)
+					pen 150.20.20 box (oldbi) (oldbx)
+					line (to-pair reduce [ oldbi/x oldbi/y ]) (to-pair reduce [ bi/x bi/y ])
+					line (to-pair reduce [ oldbi/x oldbx/y ]) (to-pair reduce [ bi/x bx/y ])
+					line (to-pair reduce [ oldbx/x oldbi/y ]) (to-pair reduce [ bx/x bi/y ])
+					line (to-pair reduce [ oldbx/x oldbx/y ]) (to-pair reduce [ bx/x bx/y ])
 				]
-				append face/draw compose [ fill-pen off ]
+				append face/draw compose [
+					font (bf)
+					text (to-pair reduce [ (oldbi/x) (oldbi/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbi/y) ])
+					text (to-pair reduce [ (oldbi/x) (oldbx/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbx/y) ])
+					text (to-pair reduce [ (oldbx/x) (oldbi/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbi/y) ])
+					text (to-pair reduce [ (oldbx/x) (oldbx/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbx/y) ])
+					font (ff)
+					text (to-pair reduce [ (bi/x) (bi/y) ]) (rejoin reduce [ (bi/x) "x" (bi/y) ])
+					text (to-pair reduce [ (bi/x) (bx/y) ]) (rejoin reduce [ (bi/x) "x" (bx/y) ])
+					text (to-pair reduce [ (bx/x) (bi/y) ]) (rejoin reduce [ (bx/x) "x" (bi/y) ])
+					text (to-pair reduce [ (bx/x) (bx/y) ]) (rejoin reduce [ (bx/x) "x" (bx/y) ])
+				]
+				append face/draw compose [
+					pen 0.0.255
+					line-width 1
+					line (to-pair reduce [ msp/x 0 ]) (to-pair reduce [ msp/x 400 ])
+					line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
+				]
+				;foreach t tracklok [
+				;	append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+				;]
 
-			    drawgrid face screenoffset
-				drawdbg face memscreenpos memgridpos
 				drawzoom face
-
-				memscreenoffset: screenoffset
-				memscreenscaled: screenscaled
-			    print [ "screen offset after zoom: " memscreenoffset ]
+			    oldbi: bi
+				oldbx: bx
 
 			] on-down [
-				memscreenpos: to-pair reduce [ (round/to event/offset/x 25) (round/to event/offset/y 25 ) ]
-				screenoffset: screenscaleandoffset memscreenpos memdragoffset scl
-				repeat t (length? trackstart) [
-					tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
-					tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
+				;msp: event/offset
+				msp: to-pair reduce [ (round/to event/offset/x 10) (round/to event/offset/y 10) ]
+				append face/draw compose [
+					pen 0.0.255
+					line-width 1
+					line (to-pair reduce [ msp/x 0 ]) (to-pair reduce [ msp/x 400 ])
+					line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
 				]
-				gridpos: scaleandoffset memscreenpos screenoffset scl
-				clear face/draw
-				foreach t tracklok [
-					append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
-				]
-				append face/draw compose [ fill-pen off ]
-				drawgrid face screenoffset
-				drawdbg face memscreenpos gridpos
-				print [ "on-down event happened at: " memscreenpos ]
-				append face/draw compose [ pen 255.0.0 line-width 3 line (to-pair reduce [ memscreenpos/x 0 ]) (to-pair reduce [ memscreenpos/x gridsize/x]) line (to-pair reduce [ 0 memscreenpos/y ]) (to-pair reduce [ gridsize/x memscreenpos/y]) ]
-				
 			] on-mid-down [ 
 				mmid: true
 				mmdown: event/offset
-				print [ "screen offset before drag..........: " memscreenoffset ]
 			] on-over [
 				if mmid [
-					mmofs: event/offset - mmdown
-					mmofs: memdragoffset + mmofs
-				    screenoffset: screenscaleandoffset memscreenpos mmofs scl
-			    	repeat t (length? trackstart) [
-				    	tracklok/:t/1: scaleandoffset trackstart/:t/1 screenoffset scl
-				    	tracklok/:t/2: scaleandoffset trackstart/:t/2 screenoffset scl
-					]
-					gridpos: scaleandoffset memscreenpos screenoffset scl
+				    dso: (event/offset - mmdown)
+					;dso/x: msp/x - (to-integer dso/x)
+					;dso/y: msp/y - (to-integer dso/y)
+					;bi: zoomit oldbi dso [ 1 1 ]
+					;bx: zoomit oldbx dso [ 1 1 ]
+					bi: oldbi + dso
+					bx: oldbx + dso
 					clear face/draw
-					foreach t tracklok [
-						append face/draw compose [ pen 255.50.50 fill-pen 180.50.50 box (t/1) (t/2) ]
+					ff: make font! [size: 8 name: "Consolas" style: 'bold color: 220.50.50 anti-alias? true]
+					bf: make font! [size: 8 name: "Consolas" style: 'bold color: 150.20.20 anti-alias? true]
+					append face/draw compose [
+						pen 255.50.50 box (bi) (bx)
+						pen 150.20.20 box (oldbi) (oldbx)
+						line (to-pair reduce [ oldbi/x oldbi/y ]) (to-pair reduce [ bi/x bi/y ])
+						line (to-pair reduce [ oldbi/x oldbx/y ]) (to-pair reduce [ bi/x bx/y ])
+						line (to-pair reduce [ oldbx/x oldbi/y ]) (to-pair reduce [ bx/x bi/y ])
+						line (to-pair reduce [ oldbx/x oldbx/y ]) (to-pair reduce [ bx/x bx/y ])
 					]
-					append face/draw compose [ fill-pen off ]
-					append face/draw compose [ pen 0.255.0 line (event/offset) (mmdown) ]
-			    	drawgrid face dragoffset
-					drawdbg face memscreenpos gridpos
+					append face/draw compose [
+						font (bf)
+						text (to-pair reduce [ (oldbi/x) (oldbi/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbi/y) ])
+						text (to-pair reduce [ (oldbi/x) (oldbx/y) ]) (rejoin reduce [ (oldbi/x) "x" (oldbx/y) ])
+						text (to-pair reduce [ (oldbx/x) (oldbi/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbi/y) ])
+						text (to-pair reduce [ (oldbx/x) (oldbx/y) ]) (rejoin reduce [ (oldbx/x) "x" (oldbx/y) ])
+						font (ff)
+						text (to-pair reduce [ (bi/x) (bi/y) ]) (rejoin reduce [ (bi/x) "x" (bi/y) ])
+						text (to-pair reduce [ (bi/x) (bx/y) ]) (rejoin reduce [ (bi/x) "x" (bx/y) ])
+						text (to-pair reduce [ (bx/x) (bi/y) ]) (rejoin reduce [ (bx/x) "x" (bi/y) ])
+						text (to-pair reduce [ (bx/x) (bx/y) ]) (rejoin reduce [ (bx/x) "x" (bx/y) ])
+					]
+					append face/draw compose [
+						pen 0.0.255
+						line-width 1
+						line (to-pair reduce [ msp/x 0 ]) (to-pair reduce [ msp/x 400 ])
+						line (to-pair reduce [ 0 msp/y ]) (to-pair reduce [ 400 msp/y ])
+					]
+					drawzoom face
 				]
 			] on-mid-up [
 				mmid: false
-				memdragoffset: mmofs
-				;memscreenoffset: 
-				;memscreenscaleoffset: dragoffset
-				print [ "screen offset after drag...........: " mmofs ]
+				mso: dso
+			    oldbi: bi
+				oldbx: bx
 			]
 		] 
 	]
