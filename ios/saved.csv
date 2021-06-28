@@ -1,0 +1,10 @@
+every; nthday; fromday; weekday; nthmonth; frommonth; fromyear; amount; cat; description
+2 ;2 ;0 ;1 ;1 ;0 ;0 ;-1.00;CSH;every 2nd and 4th monday of every month starting this month
+1 ;6 ;0 ;4 ;3 ;2 ;0 ;-5.00;CSH;every last thursday of every 3rd month starting february this yea
+1 ;26;0 ;8 ;1 ;0 ;0 ;-10.0;CSH;every weekday closest to the 26th of the month starting this month
+1 ;33;0 ;0 ;12;2 ;0 ;-150.0;SEA;every last day of february
+0 ;8 ;0 ;0 ;0 ;8 ;0 ;50.0;CPB;every 8th of august
+0 ;8 ;0 ;9 ;1 ;11;0 ;-60.0;SEA;every weekday on or before the 8th of every month starting november
+14;14;0 ;10;1 ;0 ;0 ;-300.0;MOS;every weekday on or after thge 14th and 28th of every month
+1 ;30;0 ;8 ;2 ;10;0 ;15.0;CPB;every weekday on or before the 30th of every second month starting octobe
+14;0 ;17;8 ;1 ;10;0 ;-45.0;SEA;every weekday on or before every 14 days from october 17th this year
