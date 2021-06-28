@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  fulltardie
 //
-//  Created by Juliana Wong on 24/2/21.
+//  Created by cpb on 24/2/21.
 //
 
 import SwiftUI
