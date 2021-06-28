@@ -2,7 +2,7 @@
 //  SceneDelegate.swift
 //  fulltardie3
 //
-//  Created by Juliana Wong on 27/6/21.
+//  Created by cpb on 27/6/21.
 //
 
 import UIKit
