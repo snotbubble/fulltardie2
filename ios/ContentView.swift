@@ -2,8 +2,95 @@
 //  ContentView.swift
 //  fulltardie
 //
-//  Created by cpb on 24/2/21.
-//
+//  Created by c.p.brown 2021
+
+// TODO
+
+// - [X] fulltardie
+// - [X] translate datastructure for swift
+// - [X] translate findnextdate for swift
+// - [X] commandline tests
+// - [X] handle day counting from date
+// - [X] add day offset
+// - [ ] handle date ranges
+
+// - [ ] forecast tab
+// - [X] forecast on load
+// - [ ] category colors
+// - [ ] running balance
+// - [ ] forecast options ui
+// - [ ] forecast switch: next (default), range
+// - [ ] forecast date for range end if active
+// - [ ] double tap to go to governing rule
+// - [ ] respect system theme, adjust category colors accordingly
+// - [ ] persistent mode (shows past items until checked)
+// - [ ] add checkbox to items in persistent mode
+// - [ ] remove checked in persistent mode
+// - [X] fix swiftui foreach index duplicate entry issue
+
+// - [ ] scenario tab
+// - [X] fallback default scenario
+// - [ ] app file storage dir
+// - [ ] new scenario
+// - [ ] remove scenario
+// - [ ] import scenario
+// - [ ] rename scenario
+// - [ ] export scenario
+// - [ ] safety checks for import
+// - [ ] autosave toggle
+
+// - setup tab
+// - [ ] new rule
+// - [ ] delete rule
+// - [ ] edit rule
+// - [ ] plain-english parameters
+// - [ ] reflow parameters
+// - [ ] duplicate rule
+// - [ ] reforecast after edit
+
+// - [ ] category tab
+// - [ ] add category
+// - [ ] remove category
+// - [ ] rename category
+// - [ ] category color
+// - [ ] category color to none/fg/bg switch
+
+// - [ ] graph tab
+// - [ ] stacked bar graph
+// - [ ] adapt to screen orientation
+// - [ ] use category colors
+// - [ ] adapt to ranges on display
+// - [ ] pan and zoom
+// - [ ] double-tap bg to fit
+// - [ ] select bars to pop-up info
+// - [ ] double-tap bar to go to governing rule
+
+// - [ ] swiftui
+// - [ ] respect system theme
+// - [ ] maximize screen usage
+// - [ ] all params within right-had thumb reach
+// - [ ] prevent vkb blocking params (shift ui up)
+// - [ ] optimize
+// - [ ] app icon
+// - [ ] tab icons
+// - [ ] fix scroll lag
+
+// - [ ] ipad ui adjustments
+// - [ ] 2-pane ui
+// - [ ] font scaling
+
+// - [ ] interoperability with osx version
+
+// - [ ] testing
+// - [ ] personally hostile
+// - [ ] illiterate
+// - [ ] lazy
+// - [ ] pedant
+// - [ ] profoudnly stupid
+
+// - [ ] abandon this project, start a new pinephone/posh version
+
+
 
 import SwiftUI
 
@@ -63,6 +150,7 @@ struct Rule {
 
 struct Result {
     var dky: String
+    var hrd: String
     var amt: Double
     var cat: String
     var inf: String
@@ -71,7 +159,7 @@ struct Result {
 func findnextdate(dt: Rule, n: [Int]) -> Result {
 
     var doof = 1
-    var o: Result = Result(dky: "", amt: dt.amt, cat: dt.cat, inf: dt.inf)
+    var o: Result = Result(dky: "", hrd: "", amt: dt.amt, cat: dt.cat, inf: dt.inf)
 
     let ofs = dt.evr
     let nth = dt.nth
@@ -226,6 +314,10 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
                             //print("        year string = \(syy)")
                             o.dky = syy+smo+sdy
                             //print("            date key = \(o.dky)")
+                            let hrdf = DateFormatter()
+                            hrdf.dateFormat = "dd MM yyyy"
+                            o.hrd = hrdf.string(from: a!)
+                            print("returning found date for \(dt.inf)")
                             return o
                         }
                         if ofs == 0 { break }
@@ -268,7 +360,11 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
         let smo = String(cc.component(.month,from:a!))
         let sdy = String(cc.component(.day,from:a!))
         let syy = String(cc.component(.year,from:a!))
+        let hrdf = DateFormatter()
+        hrdf.dateFormat = "dd MM yyyy"
+        o.hrd = hrdf.string(from: a!)
         o.dky = syy+smo+sdy
+        print("returning a day-count result...")
         return o
     }
 
@@ -411,12 +507,7 @@ let nn = [cc.component(.year, from: date), cc.component(.month, from: date),cc.c
 
 //check for saved data on disk...
 
-//var pth = Bundle.main.resourcePath! + "/saved.csv"
 var pth = ""
-//print("source path is : \(pth)")
-
-
-
 
 func loaddat() {
     print("loaddat started...")
@@ -428,7 +519,6 @@ func loaddat() {
             print(" saved.csv not found, using test data instead...")
         }
     }
-    //print("saved data: \(idat)")
 
     //try to populate data from sdat if it exists
     if idat.count > 0 {
@@ -460,13 +550,13 @@ func loaddat() {
 }
 
 var forecasttable = ""
-var maxlen = [0,0,0,0]
+var maxlen = [0,0,0,0,0]
 var sortedforecast : [Result] = []
 
 func renderdat() {
     print("renderdat started...")
     // set maxlen for padding terminal output
-    maxlen = [0,0,0,0]
+    maxlen = [0,0,0,0,0]
 
     //get next date using sample data
 
@@ -481,24 +571,28 @@ func renderdat() {
         var vs = String(nxt.dky).count
         if vs > maxlen[0] { maxlen[0] = vs }
 
-        vs = String(nxt.cat).count
+        vs = String(nxt.hrd).count
         if vs > maxlen[1] { maxlen[1] = vs }
-
-        vs = String(nxt.amt).count
+        
+        vs = String(nxt.cat).count
         if vs > maxlen[2] { maxlen[2] = vs }
 
-        vs = String(nxt.inf).count
+        vs = String(nxt.amt).count
         if vs > maxlen[3] { maxlen[3] = vs }
+
+        vs = String(nxt.inf).count
+        if vs > maxlen[4] { maxlen[4] = vs }
 
         forecast.append(nxt)
     }
+    print("unsortedforecast=\(forecast)")
     sortedforecast = forecast.sorted(by: { $0.dky < $1.dky })
     forecasttable = ""
-
+    //print("forecasttable=\(forecasttable)")
     for i in sortedforecast {
-        forecasttable = forecasttable + String("\(i.dky) \(i.cat) \(String(i.amt).padding(toLength: maxlen[2], withPad: " ", startingAt: 0)) \(i.inf)\n")
+        forecasttable = forecasttable + String("\(String(i.hrd).padding(toLength: maxlen[1], withPad: " ", startingAt: 0)) \(i.cat) \(String(i.amt).padding(toLength: maxlen[3], withPad: " ", startingAt: 0)) \(i.inf)\n")
     }
-    //print("\(forecasttable)")
+    print("filled forecasttable=\(forecasttable)")
     print("renderdat complete.")
 }
 
@@ -516,21 +610,49 @@ extension Color {
 struct ReportListItem: View {
     var i: Result
     var body: some View{
-        VStack(alignment: .leading) {
-            Text(String("\(i.dky) \(i.cat) \(String(i.amt).padding(toLength: maxlen[2], withPad: " ", startingAt: 0))"))
-                .font(Font.system(size: 12, design: .monospaced))
-                .multilineTextAlignment(.leading)
-                .background(Color(0x000000, opacity: 1.0))
-                .foregroundColor(Color(0x0FF00, opacity: 1.0))
-            Text(String("\(i.inf)"))
-                .font(Font.system(size: 12, design: .monospaced))
-                .multilineTextAlignment(.leading)
-                .padding(.leading)
-                .background(Color(0x000000, opacity: 1.0))
-                .foregroundColor(Color(0x0FF00, opacity: 1.0))
+        HStack (spacing: 0){
+            VStack(alignment: .leading, spacing: 0.0) {
+                HStack{
+                    Text(String("\(i.hrd)"))
+                        .font(Font.system(size: 16, design: .monospaced))
+                        .multilineTextAlignment(.leading)
+                        .foregroundColor(Color(0x0FF00, opacity: 1.0))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(String("\(i.cat)"))
+                        .font(Font.system(size: 16, design: .monospaced))
+                        .multilineTextAlignment(.leading)
+                        .foregroundColor(Color(0x0FF00, opacity: 1.0))
+                        .frame(width: 60)
+                }
+                Text(String("\(i.inf)"))
+                    .font(Font.system(size: 12, design: .monospaced))
+                    .multilineTextAlignment(.leading)
+                    .foregroundColor(Color(0x0FF00, opacity: 1.0))
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity)
+            .background(Color(0x000000))
+            VStack(alignment: .leading) {
+                if i.amt >= 0 {
+                    Text(String("\(i.amt)"))
+                        .foregroundColor(.green)
+                        .font(Font.system(size: 18, design: .monospaced))
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if i.amt < 0 {
+                    Text(String("\(i.amt)"))
+                        .foregroundColor(.red)
+                        .font(Font.system(size: 18, design: .monospaced))
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .frame(maxWidth: 100, maxHeight: .infinity)
+            .background(Color(0x000000))
         }
-        .background(Color.black)
-        .frame(width: 320, height: 60, alignment: .leading)
+        .padding(1)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 struct SetupView: View {
@@ -545,8 +667,11 @@ struct SetupView: View {
 struct ForecastView: View {
     var body: some View {
         ScrollView {
-            ForEach(sortedforecast, id: \.dky) {
-                x in ReportListItem(i: x)
+            //ForEach(sortedforecast, id: \.amt) {
+            //    x in ReportListItem(i: x)
+            //}
+            ForEach(0..<sortedforecast.count) { x in
+                ReportListItem(i: sortedforecast[x])
             }
             //VStack {
                 
@@ -581,7 +706,6 @@ struct ForecastView: View {
             //    renderdat()
             //}
         }
-        .background(Color.black)
     }
 }
 
@@ -599,6 +723,7 @@ struct ContentView: View {
                 }
         }
         .onAppear {
+            print("tab-view is appearing...")
             loaddat()
             renderdat()
         }
