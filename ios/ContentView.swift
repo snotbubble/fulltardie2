@@ -12,7 +12,7 @@
 // - [X] commandline tests
 // - [X] handle day counting from date
 // - [X] add day offset
-// - [ ] handle date ranges
+// - [X] handle date ranges
 
 // - [ ] forecast tab
 // - [X] forecast on load
