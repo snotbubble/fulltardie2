@@ -150,7 +150,7 @@ struct Rule {
 
 struct Result {
     var dky: String
-    var hrd: String
+    var hrd: Date
     var amt: Double
     var cat: String
     var inf: String
@@ -159,7 +159,7 @@ struct Result {
 func findnextdate(dt: Rule, n: [Int]) -> Result {
 
     var doof = 1
-    var o: Result = Result(dky: "", hrd: "", amt: dt.amt, cat: dt.cat, inf: dt.inf)
+    var o: Result = Result(dky: "", hrd: Date(), amt: dt.amt, cat: dt.cat, inf: dt.inf)
 
     let ofs = dt.evr
     let nth = dt.nth
@@ -173,56 +173,59 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
     //let wkds = ["0","monday","tuesday","wednesday","thursday","friday","saturday","sunday","nowke","nowke_b","nowke_a"]
     //let wkd = wkds[dwkd]
 
+// set dt components to now if its zero
+    
     if fmo == 0 { fmo = n[1] }
     if fye == 0 { fye = n[0] }
     if fdy == 0 { fdy = n[2] }
 
-// set day to last day of month if its out of range
+// correct last day of month in dt if its out of range
 
     var t = lmyd(cy:fye)
     var md = t[fmo]
     if md < fdy { fdy = md }
 
 // fucking onerous swift date shitfuckery....
-    
+   
+    // construct date from dt
     var adc = DateComponents()
     adc.year = fye
     adc.month = fmo
     adc.day = fdy
-    adc.timeZone = TimeZone(abbreviation: "AEST")
+    adc.timeZone = TimeZone(abbreviation: "UTC")
     adc.hour = 12
     adc.minute = 30
-
     let cc = Calendar.current
-    
     var a = cc.date(from: adc)
 
-    let uc = Calendar.current
-
+    // construct date from supplied 'current' date
     var bdc = DateComponents()
     bdc.year = n[0]
     bdc.month = n[1]
     bdc.day = n[2]
+    adc.timeZone = TimeZone(abbreviation: "UTC")
+    let uc = Calendar.current
     let nw = uc.date(from: bdc)
     
+    // construct duplicate of supplied date for iteration
     var jdc = DateComponents()
     jdc.year = fye
     jdc.month = fmo
     jdc.day = fdy
-    jdc.timeZone = TimeZone(abbreviation: "AEST")
+    jdc.timeZone = TimeZone(abbreviation: "UTC")
     jdc.hour = 12
     jdc.minute = 30
     var j = cc.date(from: adc)
     
+    // get difference in (months + 12) between supplied data and current
     let aa = uc.ordinality(of: .day, in: .era, for: Date())
     let bb = cc.ordinality(of: .day, in: .era, for: a!)
-
     let dif = Int(((Double(aa! - bb!) / 7.0) / 52.0) * 12.0) + 12
-
-    //print("    month diff is: \(dif)")
+    //print(" dif = \(dif)")
+    
     if nth > 0 {
+        // search up to (dif) months for a matching date
         for _ in 1...dif {
-            //print("    i=\(i)")
             var dmo = (cc.component(.month, from: a!) == fmo)
             if ofm > 0 {
                 dmo = ((cc.component(.month, from: a!) - fmo) % ofm == 0)
@@ -314,10 +317,11 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
                             //print("        year string = \(syy)")
                             o.dky = syy+smo+sdy
                             //print("            date key = \(o.dky)")
-                            let hrdf = DateFormatter()
-                            hrdf.dateFormat = "dd MM yyyy"
-                            o.hrd = hrdf.string(from: a!)
-                            print("returning found date for \(dt.inf)")
+                            //let hrdf = DateFormatter()
+                            //hrdf.dateFormat = "dd MM yyyy"
+                            //o.hrd = hrdf.string(from: a!)
+                            o.hrd = a!
+                            //print("returning found date for \(dt.inf)")
                             return o
                         }
                         if ofs == 0 { break }
@@ -337,6 +341,7 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
     }
 
 // nth is zero and offset isn't, so we're just counting days
+// TODO: integrate this with the main search loop above
 
     if nth == 0 && ofs > 0 {
         a = cc.date(byAdding: .day, value: ofs, to: a!)!
@@ -361,14 +366,15 @@ func findnextdate(dt: Rule, n: [Int]) -> Result {
         let sdy = String(cc.component(.day,from:a!))
         let syy = String(cc.component(.year,from:a!))
         let hrdf = DateFormatter()
-        hrdf.dateFormat = "dd MM yyyy"
-        o.hrd = hrdf.string(from: a!)
+        //hrdf.dateFormat = "dd MM yyyy"
+        //o.hrd = hrdf.string(from: a!)
+        o.hrd = a!
         o.dky = syy+smo+sdy
-        print("returning a day-count result...")
+        //print("returning a day-count result...")
         return o
     }
 
-// return today if nothing is found...
+// return unfilled result nothing is found, this will get ingored by the recieving function
 
     return o
 }
@@ -503,7 +509,8 @@ var dat = [
 let date = Date()
 let cc = Calendar.current
 let nn = [cc.component(.year, from: date), cc.component(.month, from: date),cc.component(.day, from: date)]
-//print("nn = \(nn)")
+
+var ded = Calendar.current.date(byAdding: .year, value: 1, to: date)
 
 //check for saved data on disk...
 
@@ -553,7 +560,15 @@ var forecasttable = ""
 var maxlen = [0,0,0,0,0]
 var sortedforecast : [Result] = []
 
-func renderdat() {
+func printmemydate (myd: Date) -> String {
+    var o = ""
+    let hrdf = DateFormatter()
+    hrdf.dateFormat = "dd MM yyyy"
+    o = hrdf.string(from: myd)
+    return o
+}
+
+func renderdat(dorange: Bool, endd: Date) {
     print("renderdat started...")
     // set maxlen for padding terminal output
     maxlen = [0,0,0,0,0]
@@ -562,37 +577,97 @@ func renderdat() {
 
     var forecast : [Result] = []
     //print("sample data: \(dat)")
-    print(" dat.count = \(dat.count)")
+    print("    dat.count = \(dat.count)")
     for s in 0...(dat.count-1) {
         //print("processing data row: \n\(dat[s])\n")
         let row = dat[s]
-        let nxt = findnextdate(dt:row,n:nn)
+    // collect transactions over a range, else just grab next transaction
+        if dorange {
+        // more reatarded swift date fuckery
+            //let wut = Calendar.current
+            //let huh = Calendar.current
+            var sta = Date().timeIntervalSince1970 as? Double
+            let sto = endd.timeIntervalSince1970 as? Double
+            print("    initial start ordinal is \(sta!)")
+            print("    stop ordinal is......... \(sto!)")
+        // keep shifting start date to found date and search from there until start ordinal > stop ordinal
+            while sto! > sta! {
+                var dsta = Date(timeIntervalSince1970: sta!)
+                print("        start date from ordinal is \(dsta)")
+                let cuc = Calendar.current
+                let nwn = [cuc.component(.year, from: dsta), cuc.component(.month, from: dsta),cuc.component(.day, from: dsta)]
+                let nxt = findnextdate(dt: row, n:nwn)
+                if nxt.dky != "" {
+                    let inc = nxt.hrd.timeIntervalSince1970 as? Double
+                    print("            entry ordinal is \(inc!)")
+                    dsta = Date(timeIntervalSince1970: sta!)
+                    print("            entry date is... \(dsta)")
+                    if inc! >= sta! {
+                        var vs = String(nxt.dky).count
+                        if vs > maxlen[0] { maxlen[0] = vs }
 
-        var vs = String(nxt.dky).count
-        if vs > maxlen[0] { maxlen[0] = vs }
+                        let hrdf = DateFormatter()
+                        hrdf.dateFormat = "dd MM yyyy"
+                        let tds = hrdf.string(from: nxt.hrd)
+                        vs = String(tds).count
+                        if vs > maxlen[1] { maxlen[1] = vs }
+                        
+                        vs = String(nxt.cat).count
+                        if vs > maxlen[2] { maxlen[2] = vs }
 
-        vs = String(nxt.hrd).count
-        if vs > maxlen[1] { maxlen[1] = vs }
-        
-        vs = String(nxt.cat).count
-        if vs > maxlen[2] { maxlen[2] = vs }
+                        vs = String(nxt.amt).count
+                        if vs > maxlen[3] { maxlen[3] = vs }
 
-        vs = String(nxt.amt).count
-        if vs > maxlen[3] { maxlen[3] = vs }
+                        vs = String(nxt.inf).count
+                        if vs > maxlen[4] { maxlen[4] = vs }
 
-        vs = String(nxt.inf).count
-        if vs > maxlen[4] { maxlen[4] = vs }
+                        forecast.append(nxt)
+                        // add a day
+                        sta = (inc! + 86400.0)
+                    }
+            // no data, bail...
+                } else {
+                    break
+                }
+            }
+        } else {
+            let nxt = findnextdate(dt:row,n:nn)
+            if nxt.dky != "" {
+                
+                var vs = String(nxt.dky).count
+                if vs > maxlen[0] { maxlen[0] = vs }
 
-        forecast.append(nxt)
+                let hrdf = DateFormatter()
+                hrdf.dateFormat = "dd MM yyyy"
+                let tds = hrdf.string(from: nxt.hrd)
+                vs = String(tds).count
+                if vs > maxlen[1] { maxlen[1] = vs }
+                
+                vs = String(nxt.cat).count
+                if vs > maxlen[2] { maxlen[2] = vs }
+
+                vs = String(nxt.amt).count
+                if vs > maxlen[3] { maxlen[3] = vs }
+
+                vs = String(nxt.inf).count
+                if vs > maxlen[4] { maxlen[4] = vs }
+
+                forecast.append(nxt)
+            }
+        }
     }
-    print("unsortedforecast=\(forecast)")
+    //print("unsortedforecast=\(forecast)")
     sortedforecast = forecast.sorted(by: { $0.dky < $1.dky })
     forecasttable = ""
     //print("forecasttable=\(forecasttable)")
+    
+    // this is for commandline only
     for i in sortedforecast {
-        forecasttable = forecasttable + String("\(String(i.hrd).padding(toLength: maxlen[1], withPad: " ", startingAt: 0)) \(i.cat) \(String(i.amt).padding(toLength: maxlen[3], withPad: " ", startingAt: 0)) \(i.inf)\n")
+        let tds = printmemydate(myd: i.hrd)
+        //print("    injected formatted date string is \(tds)")
+        forecasttable = forecasttable + String("\(String(tds).padding(toLength: maxlen[1], withPad: " ", startingAt: 0)) \(i.cat) \(String(i.amt).padding(toLength: maxlen[3], withPad: " ", startingAt: 0)) \(i.inf)\n")
     }
-    print("filled forecasttable=\(forecasttable)")
+    //print("filled forecasttable=\(forecasttable)")
     print("renderdat complete.")
 }
 
@@ -608,12 +683,17 @@ extension Color {
 }
 
 struct ReportListItem: View {
+    let viewmemydate: DateFormatter = {
+        let mydf = DateFormatter()
+        mydf.dateFormat = "dd MM yyyy"
+        return mydf
+    }()
     var i: Result
     var body: some View{
         HStack (spacing: 0){
             VStack(alignment: .leading, spacing: 0.0) {
                 HStack{
-                    Text(String("\(i.hrd)"))
+                    Text("\(viewmemydate.string(from: i.hrd))")
                         .font(Font.system(size: 16, design: .monospaced))
                         .multilineTextAlignment(.leading)
                         .foregroundColor(Color(0x0FF00, opacity: 1.0))
@@ -724,8 +804,10 @@ struct ContentView: View {
         }
         .onAppear {
             print("tab-view is appearing...")
+            print("now is.............. \(date)")
+            print("one year from now is \(ded!)")
             loaddat()
-            renderdat()
+            renderdat(dorange: true, endd: ded!)
         }
     }
 }
