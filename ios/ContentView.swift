@@ -12,7 +12,7 @@
 // - [X] commandline tests
 // - [X] handle day counting from date
 // - [X] add day offset
-// - [X] handle date ranges
+// - [ ] handle date ranges
 
 // - [ ] forecast tab
 // - [X] forecast on load
@@ -148,7 +148,8 @@ struct Rule {
     var inf = ""
 }
 
-struct Result {
+struct Result: Identifiable {
+    let id: UUID
     var dky: String
     var hrd: Date
     var amt: Double
@@ -159,7 +160,7 @@ struct Result {
 func findnextdate(dt: Rule, n: [Int]) -> Result {
 
     var doof = 1
-    var o: Result = Result(dky: "", hrd: Date(), amt: dt.amt, cat: dt.cat, inf: dt.inf)
+    var o: Result = Result(id: UUID(), dky: "", hrd: Date(), amt: dt.amt, cat: dt.cat, inf: dt.inf)
 
     let ofs = dt.evr
     let nth = dt.nth
@@ -517,7 +518,7 @@ var ded = Calendar.current.date(byAdding: .year, value: 1, to: date)
 var pth = ""
 
 func loaddat() {
-    print("loaddat started...")
+    //print("loaddat started...")
     var idat = ""
     if let pth = Bundle.main.path(forResource: "saved", ofType: "csv") {
       do {
@@ -530,13 +531,13 @@ func loaddat() {
     //try to populate data from sdat if it exists
     if idat.count > 0 {
         dat = []
-        print(" idat found, extracting data...")
+        //print(" idat found, extracting data...")
         let  ida = idat.components(separatedBy: .newlines)
     // process rows, skip header
         for u in 1...(ida.count-1) {
             //print("ida[u] = \(ida[u])")
             let rc = ida[u].split(separator: ";").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            print("columns = \(rc)")
+            //print("columns = \(rc)")
             if rc.count == 10 {
                 var d: Rule! = Rule()
                 d.evr = Int(rc[0]) ?? 0
@@ -553,12 +554,14 @@ func loaddat() {
             }
         }
     }
-    print("loaddat complete.")
+    //print("loaddat complete.")
 }
 
 var forecasttable = ""
-var maxlen = [0,0,0,0,0]
+var maxlen = [0,0,0,0,0,0]
 var sortedforecast : [Result] = []
+var hl = String("").padding(toLength: (maxlen[5]), withPad: "-", startingAt: 0)
+var gdorng = true
 
 func printmemydate (myd: Date) -> String {
     var o = ""
@@ -569,15 +572,15 @@ func printmemydate (myd: Date) -> String {
 }
 
 func renderdat(dorange: Bool, endd: Date) {
-    print("renderdat started...")
+    //print("renderdat started...")
     // set maxlen for padding terminal output
-    maxlen = [0,0,0,0,0]
+    maxlen = [0,0,0,0,0,0]
 
     //get next date using sample data
 
     var forecast : [Result] = []
     //print("sample data: \(dat)")
-    print("    dat.count = \(dat.count)")
+    //print("    dat.count = \(dat.count)")
     for s in 0...(dat.count-1) {
         //print("processing data row: \n\(dat[s])\n")
         let row = dat[s]
@@ -588,20 +591,20 @@ func renderdat(dorange: Bool, endd: Date) {
             //let huh = Calendar.current
             var sta = Date().timeIntervalSince1970 as? Double
             let sto = endd.timeIntervalSince1970 as? Double
-            print("    initial start ordinal is \(sta!)")
-            print("    stop ordinal is......... \(sto!)")
+            //print("    initial start ordinal is \(sta!)")
+            //print("    stop ordinal is......... \(sto!)")
         // keep shifting start date to found date and search from there until start ordinal > stop ordinal
             while sto! > sta! {
                 var dsta = Date(timeIntervalSince1970: sta!)
-                print("        start date from ordinal is \(dsta)")
+                //print("        start date from ordinal is \(dsta)")
                 let cuc = Calendar.current
                 let nwn = [cuc.component(.year, from: dsta), cuc.component(.month, from: dsta),cuc.component(.day, from: dsta)]
                 let nxt = findnextdate(dt: row, n:nwn)
                 if nxt.dky != "" {
                     let inc = nxt.hrd.timeIntervalSince1970 as? Double
-                    print("            entry ordinal is \(inc!)")
+                    //print("            entry ordinal is \(inc!)")
                     dsta = Date(timeIntervalSince1970: sta!)
-                    print("            entry date is... \(dsta)")
+                    //print("            entry date is... \(dsta)")
                     if inc! >= sta! {
                         var vs = String(nxt.dky).count
                         if vs > maxlen[0] { maxlen[0] = vs }
@@ -620,7 +623,10 @@ func renderdat(dorange: Bool, endd: Date) {
 
                         vs = String(nxt.inf).count
                         if vs > maxlen[4] { maxlen[4] = vs }
-
+                        
+                        maxlen[5] = (maxlen[0] + maxlen[1] + maxlen[2] + maxlen[3] + maxlen[4])
+                        hl = String("").padding(toLength: (maxlen[5]), withPad: "-", startingAt: 0)
+                        
                         forecast.append(nxt)
                         // add a day
                         sta = (inc! + 86400.0)
@@ -652,6 +658,9 @@ func renderdat(dorange: Bool, endd: Date) {
                 vs = String(nxt.inf).count
                 if vs > maxlen[4] { maxlen[4] = vs }
 
+                maxlen[5] = (maxlen[0] + maxlen[1] + maxlen[2] + maxlen[3] + maxlen[4])
+                hl = String("").padding(toLength: (maxlen[5]), withPad: "-", startingAt: 0)
+                
                 forecast.append(nxt)
             }
         }
@@ -668,7 +677,7 @@ func renderdat(dorange: Bool, endd: Date) {
         forecasttable = forecasttable + String("\(String(tds).padding(toLength: maxlen[1], withPad: " ", startingAt: 0)) \(i.cat) \(String(i.amt).padding(toLength: maxlen[3], withPad: " ", startingAt: 0)) \(i.inf)\n")
     }
     //print("filled forecasttable=\(forecasttable)")
-    print("renderdat complete.")
+    //print("renderdat complete.")
 }
 
 
@@ -690,48 +699,24 @@ struct ReportListItem: View {
     }()
     var i: Result
     var body: some View{
-        HStack (spacing: 0){
-            VStack(alignment: .leading, spacing: 0.0) {
-                HStack{
-                    Text("\(viewmemydate.string(from: i.hrd))")
-                        .font(Font.system(size: 16, design: .monospaced))
-                        .multilineTextAlignment(.leading)
-                        .foregroundColor(Color(0x0FF00, opacity: 1.0))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(String("\(i.cat)"))
-                        .font(Font.system(size: 16, design: .monospaced))
-                        .multilineTextAlignment(.leading)
-                        .foregroundColor(Color(0x0FF00, opacity: 1.0))
-                        .frame(width: 60)
-                }
-                Text(String("\(i.inf)"))
-                    .font(Font.system(size: 12, design: .monospaced))
-                    .multilineTextAlignment(.leading)
-                    .foregroundColor(Color(0x0FF00, opacity: 1.0))
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity)
-            .background(Color(0x000000))
-            VStack(alignment: .leading) {
-                if i.amt >= 0 {
-                    Text(String("\(i.amt)"))
-                        .foregroundColor(.green)
-                        .font(Font.system(size: 18, design: .monospaced))
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                if i.amt < 0 {
-                    Text(String("\(i.amt)"))
-                        .foregroundColor(.red)
-                        .font(Font.system(size: 18, design: .monospaced))
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .frame(maxWidth: 100, maxHeight: .infinity)
-            .background(Color(0x000000))
+        VStack (spacing: 0){
+            //VStack(alignment: .leading, spacing: 0.0) {
+                //HStack{
+            Text("\(viewmemydate.string(from: i.hrd))   \(i.cat)   \(String(format: "%.2f", i.amt))\n")
+            .padding(5)
+                //.multilineTextAlignment(.leading)
+            .font(.custom("Monoid-Regular", size: 16))
+            .frame(maxWidth: .infinity, maxHeight: 20, alignment: .leading)
+            //.fixedSize(horizontal: false, vertical: true)
+            //.border(Color.black, width: 1)
+        Text("\(i.inf)\n")
+            .padding(5)
+            //.multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .font(.custom("Monoid-Regular", size: 16))
+            //.border(Color.black, width: 1)
         }
-        .padding(1)
+        .padding(5)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -745,46 +730,54 @@ struct SetupView: View {
 }
 
 struct ForecastView: View {
+    @State private var dorng = 0
     var body: some View {
-        ScrollView {
-            //ForEach(sortedforecast, id: \.amt) {
-            //    x in ReportListItem(i: x)
-            //}
-            ForEach(0..<sortedforecast.count) { x in
-                ReportListItem(i: sortedforecast[x])
-            }
-            //VStack {
-                
-                //List(sortedforecast, id: \.dky) { x in
-                //    ReportListItem(i: x)
+        VStack {
+            ScrollView {
+                //ForEach(0..<sortedforecast.count) { x in
+                //    ReportListItem(i: sortedforecast[x])
                 //}
-                //.frame(width: 320.0, height: 900.0)
-                /*
-                List {
-                    Section.init {
-                        Text("forecast list header")
-                    }
-                    ForEach((1...100).reversed(), id: \.self) {
-                        Text("\($0)…")
-                    }
-                    //ForEach(sortedforecast, i: \.dky) {
-                        //x in ReportListItem(i: x)
-                        //Text("wut")
-                    //}
+                ForEach(sortedforecast) { x in
+                    ReportListItem(i: x)
                 }
-                .frame(width: 320.0, height: 900.0)
-                 */
-                //.onAppear {
-                //    loaddat()
-                //    renderdat()
-                //}
-           // }
-            //.frame(width: 320.0, height: 900.0)
-            //.ignoresSafeArea()
-            //.onAppear {
-            //    loaddat()
-            //    renderdat()
-            //}
+            }
+            //.frame(maxHeight: 500)
+            HStack {
+                Picker("", selection: $dorng, content: { // <2>
+                    Text("year").tag(0) // <3>
+                    Text("next").tag(1) // <4>
+                })
+                .pickerStyle(SegmentedPickerStyle())
+                .onChange(of: dorng) { val in
+                    let dr = (val == 1)
+                    renderdat(dorange: dr, endd: ded!)
+                    print("    sortedforecastcount is \(sortedforecast.count)\n")
+                }
+                //.font(.custom("Monoid-Regular", size: 10))
+                .frame(width: 180, height: 70)
+                /*
+                Toggle("next only", isOn: $dorng)
+                    .onChange(of: dorng) { val in
+                        gdorng = val
+                        print("\n    toggled is \(val)")
+                        print("    gdorng is \(gdorng)")
+                        print("    $dorng is \(dorng)")
+                        renderdat(dorange: val, endd: ded!)
+                        print("    sortedforecastcount is \(sortedforecast.count)\n")
+                    }
+                    .frame(width: 120)
+                    .padding(5)
+                */
+                Text("count = \(sortedforecast.count)")
+            }
+            .padding(5)
+            .frame(maxWidth: .infinity, maxHeight: 80, alignment: .leading)
+            //.background(Color.red)
+            .font(.custom("Monoid-Regular", size: 16))
+        }
+        .onAppear {
+            dorng = 0
+            print("forecastview: gdorng is \(gdorng)")
         }
     }
 }
@@ -803,12 +796,14 @@ struct ContentView: View {
                 }
         }
         .onAppear {
-            print("tab-view is appearing...")
-            print("now is.............. \(date)")
-            print("one year from now is \(ded!)")
+            //print("tab-view is appearing...")
+            //print("now is.............. \(date)")
+            //print("one year from now is \(ded!)")
             loaddat()
-            renderdat(dorange: true, endd: ded!)
+            renderdat(dorange: gdorng, endd: ded!)
+            print("gdorng is \(gdorng)")
         }
+        //.frame(height: 1000)
     }
 }
 
@@ -816,6 +811,7 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
+    
 }
 
 
