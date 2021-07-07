@@ -6,21 +6,26 @@
 
 // TODO
 
+// [X] = done
+// [!] = doing it
+// [-] = probably not doing it
+// [?] = having proiblems with it
+
 // - [X] fulltardie
 // - [X] translate datastructure for swift
 // - [X] translate findnextdate for swift
 // - [X] commandline tests
 // - [X] handle day counting from date
 // - [X] add day offset
-// - [ ] handle date ranges
+// - [X] handle date ranges
 
-// - [ ] forecast tab
+// - [!] forecast tab
 // - [X] forecast on load
 // - [ ] category colors
 // - [ ] running balance
-// - [ ] forecast options ui
-// - [ ] forecast switch: next (default), range
-// - [ ] forecast date for range end if active
+// - [!] forecast options ui
+// - [?] forecast switch: next (default), range -- toggle only works on 3rd activation
+// - [-] forecast date for range end if active
 // - [ ] double tap to go to governing rule
 // - [ ] respect system theme, adjust category colors accordingly
 // - [ ] persistent mode (shows past items until checked)
@@ -28,7 +33,7 @@
 // - [ ] remove checked in persistent mode
 // - [X] fix swiftui foreach index duplicate entry issue
 
-// - [ ] scenario tab
+// - [!] scenario tab
 // - [X] fallback default scenario
 // - [ ] app file storage dir
 // - [ ] new scenario
@@ -39,7 +44,7 @@
 // - [ ] safety checks for import
 // - [ ] autosave toggle
 
-// - setup tab
+// - [ ] setup tab
 // - [ ] new rule
 // - [ ] delete rule
 // - [ ] edit rule
@@ -65,19 +70,19 @@
 // - [ ] select bars to pop-up info
 // - [ ] double-tap bar to go to governing rule
 
-// - [ ] swiftui
-// - [ ] respect system theme
-// - [ ] maximize screen usage
-// - [ ] all params within right-had thumb reach
+// - [!] swiftui
+// - [!] respect system theme
+// - [!] maximize screen usage
+// - [!] all params within right-had thumb reach
 // - [ ] prevent vkb blocking params (shift ui up)
-// - [ ] optimize
+// - [!] optimize
 // - [ ] app icon
 // - [ ] tab icons
 // - [ ] fix scroll lag
 
-// - [ ] ipad ui adjustments
-// - [ ] 2-pane ui
-// - [ ] font scaling
+// - [-] ipad ui adjustments -- fucking ipad battery died right after warranty expired
+// - [-] 2-pane ui
+// - [-] font scaling
 
 // - [ ] interoperability with osx version
 
